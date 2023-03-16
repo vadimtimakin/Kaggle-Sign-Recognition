@@ -1,0 +1,5 @@
+checkpoints/
+inference_artifacts/
+wandb/
+feature_data/
+__pycache__/
