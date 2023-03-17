@@ -4,6 +4,7 @@ import json
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
+import pickle
 
 import torch
 import torch.nn as nn
@@ -20,6 +21,37 @@ lipsLowerOuter = [146, 91, 181, 84, 17, 314, 405, 321, 375, 291]
 lipsUpperInner = [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308]
 lipsLowerInner = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308]
 lips = lipsUpperOuter + lipsLowerOuter + lipsUpperInner + lipsLowerInner
+
+
+class InputNet(nn.Module):
+    def __init__(self, ):
+        super().__init__()
+        self.max_length = 96
+  
+    def forward(self, xyz):
+        xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True)
+        xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
+
+        LIP = [
+            61, 185, 40, 39, 37, 0, 267, 269, 270, 409,
+            291, 146, 91, 181, 84, 17, 314, 405, 321, 375,
+            78, 191, 80, 81, 82, 13, 312, 311, 310, 415,
+            95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
+        ]
+        #LHAND = np.arange(468, 489).tolist()
+        #RHAND = np.arange(522, 543).tolist()
+
+        lip = xyz[:, LIP]
+        lhand = xyz[:, 468:489]
+        rhand = xyz[:, 522:543]
+        xyz = torch.cat([  # (none, 82, 3)
+            lip,
+            lhand,
+            rhand,
+        ], 1)
+        xyz[torch.isnan(xyz)] = 0
+        x = xyz[:self.max_length]
+        return x
 
 
 class FeatureGen(nn.Module):
@@ -52,7 +84,7 @@ class FeatureGen(nn.Module):
         
         return xfeat
     
-feature_converter = FeatureGen()
+feature_converter = InputNet()
 
 
 def load_relevant_data_subset(pq_path):
@@ -72,16 +104,20 @@ def convert_row(row):
 def convert_and_save_data():
     df = pd.read_csv(config.paths.path_to_csv)
     df['label'] = df['sign'].map(label_map)
-    npdata = np.zeros((df.shape[0], 472))
-    nplabels = np.zeros(df.shape[0])
+    npdata = []
+    nplabels = []
     with mp.Pool() as pool:
         results = pool.imap(convert_row, df.iterrows(), chunksize=250)
         for i, (x,y) in tqdm(enumerate(results), total=df.shape[0]):
-            npdata[i,:] = x
-            nplabels[i] = y
-    
-    np.save("feature_data.npy", npdata)
-    np.save("feature_labels.npy", nplabels)
+            npdata.append(x)
+            nplabels.append(y)
+
+    with open('./feature_data/feature_data.pickle', 'wb') as file:
+        pickle.dump(npdata, file)
+
+    with open('./feature_data/feature_labels.pickle', 'wb') as file:
+        pickle.dump(nplabels, file)
+
 
 if __name__ == "__main__":  
     convert_and_save_data()

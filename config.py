@@ -7,12 +7,12 @@ config = {
         'num_classes': 250, 
     },
     'paths': {
-        'path_to_csv': 'home/toefl/K/asl-signs/train.csv',
+        'path_to_csv': '/home/toefl/K/asl-signs/train.csv',
         'path_to_data': './feature_data/feature_data.npy',
         'path_to_labels': './feature_data/feature_labels.npy',
-        'path_to_json': 'home/toefl/K/asl-signs/sign_to_prediction_index_map.json',
-        'path_to_folder': 'home/toefl/K/asl-signs/',
-        'pq_path': 'home/toefl/K/asl-signs/train_landmark_files/53618/1001379621.parquet',
+        'path_to_json': '/home/toefl/K/asl-signs/sign_to_prediction_index_map.json',
+        'path_to_folder': '/home/toefl/K/asl-signs/',
+        'pq_path': '/home/toefl/K/asl-signs/train_landmark_files/53618/1001379621.parquet',
         'path_to_checkpoints': './checkpoints/${general.experiment_name}',
     },
     'training': {
