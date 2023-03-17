@@ -1,195 +1,231 @@
 import math
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from collections import OrderedDict
 
 
-# class ArcMarginProduct(nn.Module):
-#     def __init__(
-#         self,
-#         config,
-#         in_features,
-#         out_features,
-#         scale=30.0,
-#         margin=0.50,
-#         easy_margin=False,
-#         ls_eps=0.0,
-#     ):
-#         super(ArcMarginProduct, self).__init__()
-#         self.config = config
-
-#         self.in_features = in_features
-#         self.out_features = out_features
-#         self.scale = scale
-#         self.margin = margin
-#         self.ls_eps = ls_eps  # label smoothing
-#         self.weight = nn.Parameter(torch.FloatTensor(out_features, in_features))
-#         nn.init.xavier_uniform_(self.weight)
-
-#         self.easy_margin = easy_margin
-#         self.cos_m = math.cos(margin)
-#         self.sin_m = math.sin(margin)
-#         self.th = math.cos(math.pi - margin)
-#         self.mm = math.sin(math.pi - margin) * margin
-
-#     def forward(self, input, label):
-#         # --------------------------- cos(theta) & phi(theta) ---------------------------
-#         cosine = F.linear(F.normalize(input), F.normalize(self.weight))
-#         sine = torch.sqrt(1.0 - torch.pow(cosine, 2))
-#         phi = cosine * self.cos_m - sine * self.sin_m
-#         if self.easy_margin:
-#             phi = torch.where(cosine > 0, phi, cosine)
-#         else:
-#             phi = torch.where(cosine > self.th, phi, cosine - self.mm)
-#         # --------------------------- convert label to one-hot ---------------------------
-#         # one_hot = torch.zeros(cosine.size(), requires_grad=True, device='cuda')
-#         one_hot = torch.zeros(cosine.size(), device=self.config.training.device)
-#         one_hot.scatter_(1, label.view(-1, 1).long(), 1)
-#         if self.ls_eps > 0:
-#             one_hot = (1 - self.ls_eps) * one_hot + self.ls_eps / self.out_features
-#         # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------
-#         output = (one_hot * phi) + ((1.0 - one_hot) * cosine)
-#         output *= self.scale
-
-#         return output
-
-
-# class Model(nn.Module):
-#     def __init__(self, cfg):
-#         super(Model, self).__init__()
-#         self.cfg = cfg
-#         self.lin_bn_mish = nn.Sequential(
-#             OrderedDict(
-#                 [
-#                     ("lin_mish1", lin_bn_mish(472, 512)),
-#                     ("lin_mish2", lin_bn_mish(512, 256)),
-#                     ("lin_mish3", lin_bn_mish(256, 256)),
-#                     ("lin_mish4", lin_bn_mish(256, 128)),
-#                 ]
-#             )
-#         )
-
-#         self.final = ArcMarginProduct(
-#             128,
-#             self.cfg.target_size,
-#             scale=self.cfg.scale,
-#             margin=self.cfg.margin,
-#             easy_margin=False,
-#             ls_eps=0.0,
-#         )
-#         self.fc_probs = nn.Linear(128, self.cfg.target_size)
-
-#     def forward(self, x, label):
-#         feature = self.lin_bn_mish(x)
-#         if self.cfg.arcface:
-#             arcface = self.final(feature, label)
-#             probs = self.fc_probs(feature)
-#             return probs, arcface
-#         else:
-#             probs = self.fc_probs(feature)
-#             return probs
-
-
-# def lin_bn_mish(input_dim, output_dim):
-#     return nn.Sequential(
-#         OrderedDict(
-#             [
-#                 ("lin", nn.Linear(input_dim, output_dim, bias=False)),
-#                 ("bn", nn.BatchNorm1d(output_dim)),
-#                 ("dropout", nn.Dropout(0.2)),
-#                 ("relu", nn.Mish()),
-#             ]
-#         )
-#     )
-
-
-# class ASLLinearModel(torch.nn.Module):
-#     def __init__(
-#         self,
-#         config,
-#         in_features: int,
-#         first_out_features: int,
-#         num_classes: int,
-#         num_blocks: int,
-#         drop_rate: float,
-#     ):
-#         super(ASLLinearModel, self).__init__()
-#         self.config = config
-
-#         blocks = []
-#         out_features = first_out_features
-#         for idx in range(num_blocks):
-#             if idx == num_blocks - 1:
-#                 out_features = num_classes
-
-#             blocks.append(self._make_block(in_features, out_features, drop_rate))
-
-#             in_features = out_features
-#             out_features = out_features // 2
-
-#         self.model = nn.Sequential(*blocks)
-
-#     def _make_block(self, in_features, out_features, drop_rate):
-#         return nn.Sequential(
-#             nn.Linear(in_features, out_features),
-#             nn.BatchNorm1d(out_features),
-#             nn.ReLU(),
-#             nn.Dropout(drop_rate),
-#         )
-
-#     def forward(self, x):
-#         return self.model(x)
-
-
-class ASLModel(nn.Module):
-    def __init__(self, p, in_features, n_class):
-        super(ASLModel, self).__init__()
-        self.dropout = nn.Dropout(p)
-        self.layer0 = nn.Linear(in_features, 1024)
-        self.layer1 = nn.Linear(1024, 512)
-        self.layer2 = nn.Linear(512, n_class)
-        
-    def forward(self, x):
-        x = self.layer0(x)
-        x = self.dropout(x)
-        x = self.layer1(x)
-        x = self.layer2(x)
-        return x
-    
-class ASLLinearModel(nn.Module):
-    def __init__(
-        self,
-        config,
-        in_features: int,
-        first_out_features: int,
-        num_classes: int,
-        num_blocks: int,
-        drop_rate: float,
-    ):
+class ArcMarginProduct(nn.Module):
+    def __init__(self, in_features, out_features):
         super().__init__()
-        self.config = config
+        self.weight = nn.Parameter(torch.Tensor(out_features, in_features))
+        self.reset_parameters()
 
-        blocks = []
-        out_features = first_out_features
-        for idx in range(num_blocks):
-            if idx == num_blocks - 1:
-                out_features = num_classes
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.weight)
 
-            blocks.append(self._make_block(in_features, out_features, drop_rate))
+    def forward(self, features):
+        cosine = F.linear(F.normalize(features), F.normalize(self.weight))
+        return cosine
+    
 
-            in_features = out_features
-            out_features = out_features // 2
+class ArcMarginProduct_subcenter(nn.Module):
+    def __init__(self, in_features, out_features, k=3):
+        super().__init__()
+        self.weight = nn.Parameter(torch.FloatTensor(out_features*k, in_features))
+        self.reset_parameters()
+        self.k = k
+        self.out_features = out_features
+        
+    def reset_parameters(self):
+        stdv = 1. / math.sqrt(self.weight.size(1))
+        self.weight.data.uniform_(-stdv, stdv)
+        
+    def forward(self, features):
+        cosine_all = F.linear(F.normalize(features), F.normalize(self.weight))
+        cosine_all = cosine_all.view(-1, self.out_features, self.k)
+        cosine, _ = torch.max(cosine_all, dim=2)
+        return cosine   
 
-        self.model = nn.Sequential(*blocks)
 
-    def _make_block(self, in_features, out_features, drop_rate):
-        return nn.Sequential(
-            nn.Linear(in_features, out_features),
-            nn.BatchNorm1d(out_features),
-            nn.ReLU(),
-            nn.Dropout(drop_rate),
+class HardSwish(nn.Module):
+    def __init__(self,):
+        super().__init__()
+    def forward(self, x):
+        return x * F.relu6(x+3) * 0.16666667
+
+
+class FeedForward(nn.Module):
+    def __init__(self, embed_dim, hidden_dim):
+        super().__init__()
+        self.mlp = nn.Sequential(
+            nn.Linear(embed_dim, hidden_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_dim, embed_dim),
+        )
+    def forward(self, x):
+        return self.mlp(x)
+
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self,
+            embed_dim,
+            num_head,
+            batch_first,
+        ):
+        super().__init__()
+        self.mha = nn.MultiheadAttention(
+            embed_dim,
+            num_heads=num_head,
+            bias=True,
+            add_bias_kv=False,
+            kdim=None,
+            vdim=None,
+            dropout=0.0,
+            batch_first=batch_first,
         )
 
-    def forward(self, x):
-        return self.model(x)
+    def forward(self, x, x_mask):
+        out, _ = self.mha(x,x,x, key_padding_mask=x_mask)
+        return out
+    
+
+class TransformerBlock(nn.Module):
+    def __init__(self,
+        embed_dim,
+        num_head,
+        out_dim,
+        batch_first=True,
+    ):
+        super().__init__()
+        self.attn  = MultiHeadAttention(embed_dim, num_head,batch_first)
+        self.ffn   = FeedForward(embed_dim, out_dim)
+        self.norm1 = nn.LayerNorm(embed_dim)
+        self.norm2 = nn.LayerNorm(out_dim)
+
+    def forward(self, x, x_mask=None):
+        x = x + self.attn((self.norm1(x)), x_mask)
+        x = x + self.ffn((self.norm2(x)))
+        return x
+
+
+def positional_encoding(length, embed_dim):
+    dim = embed_dim//2
+    position = np.arange(length)[:, np.newaxis]     # (seq, 1)
+    dim = np.arange(dim)[np.newaxis, :]/dim   # (1, dim)
+    angle = 1 / (10000**dim)         # (1, dim)
+    angle = position * angle    # (pos, dim)
+    pos_embed = np.concatenate(
+        [np.sin(angle), np.cos(angle)],
+        axis=-1
+    )
+    pos_embed = torch.from_numpy(pos_embed).float()
+    return pos_embed
+
+
+def pack_seq(
+    seq, max_length,
+):
+    length = [min(len(s), max_length)  for s in seq]
+    batch_size = len(seq)
+    K = seq[0].shape[1]
+    L = max(length)
+
+    x = torch.zeros((batch_size, L, K, 2)).to(seq[0].device)
+    x_mask = torch.zeros((batch_size, L)).to(seq[0].device)
+    for b in range(batch_size):
+        l = length[b]
+        x[b, :l] = seq[b][:l]
+        x_mask[b, l:] = 1
+    x_mask = (x_mask>0.5)
+    x = x.reshape(batch_size,-1,K*2)
+    return x, x_mask
+
+#########################################################################
+
+class BasedPartyNet(nn.Module):
+
+    def __init__(self, max_length, embed_dim, num_point, num_head, num_class, num_block):
+        super().__init__()
+        self.output_type = ['inference', 'loss']
+
+        pos_embed = positional_encoding(max_length, embed_dim)
+        self.max_length = max_length
+
+        self.pos_embed = nn.Parameter(pos_embed)
+
+        self.cls_embed = nn.Parameter(torch.zeros((1, embed_dim)))
+        self.x_embed = nn.Sequential(
+            nn.Linear(num_point * 2, embed_dim, bias=False),
+        )
+
+        self.encoder = nn.ModuleList([
+            TransformerBlock(
+                embed_dim,
+                num_head,
+                embed_dim,
+            ) for i in range(num_block)
+        ])
+        # self.logit = ArcMarginProduct(self.embed_dim, num_class)
+        # self.logit = nn.Linear(self.embed_dim, num_class)
+        self.logit = ArcMarginProduct_subcenter(self.embed_dim, num_class)
+
+    def forward(self, inputs):
+        x, x_mask = pack_seq(inputs, self.max_length)
+
+        B,L,_ = x.shape
+        x = self.x_embed(x)
+        x = x + self.pos_embed[:L].unsqueeze(0)
+
+        x = torch.cat([
+            self.cls_embed.unsqueeze(0).repeat(B,1,1),
+            x
+        ],1)
+        x_mask = torch.cat([
+            torch.zeros(B,1).to(x_mask),
+            x_mask
+        ],1)
+
+        for block in self.encoder:
+            x = block(x,x_mask)
+
+        cls = x[:,0]
+        cls = F.dropout(cls,p=0.4,training=self.training)
+        logit = self.logit(cls)
+
+        return logit
+    
+
+class SingleNet(nn.Module):
+
+    def __init__(self, max_length, embed_dim, num_point, num_head, num_class, num_block):
+        super().__init__()
+        self.num_block = num_block
+        self.embed_dim = embed_dim
+        self.num_head  = num_head
+        self.max_length = max_length
+        self.num_point = num_point
+
+        pos_embed = positional_encoding(max_length, self.embed_dim)
+        self.pos_embed = nn.Parameter(pos_embed)
+
+        self.cls_embed = nn.Parameter(torch.zeros((1, self.embed_dim)))
+        self.x_embed = nn.Sequential(
+            nn.Linear(num_point * 2, self.embed_dim, bias=False),
+        )
+
+        self.encoder = nn.ModuleList([
+            TransformerBlock(
+                self.embed_dim,
+                self.num_head,
+                self.embed_dim,
+                batch_first=False
+            ) for i in range(self.num_block)
+        ])
+        # self.logit = ArcMarginProduct(self.embed_dim, num_class)
+        # self.logit = nn.Linear(self.embed_dim, num_class)
+        self.logit = ArcMarginProduct_subcenter(self.embed_dim, num_class)
+
+    def forward(self, xyz):
+        L = xyz.shape[0]
+        x_embed = self.x_embed(xyz.flatten(1)) 
+        x = x_embed[:L] + self.pos_embed[:L]
+        x = torch.cat([
+            self.cls_embed,
+            x
+        ],0)
+
+        x = self.encoder[0](x)
+        cls = x[[0]]
+        logit = self.logit(cls)
+        return logit

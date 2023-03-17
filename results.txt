@@ -11,3 +11,6 @@ default | 0.0115 | 7 s
 model_upd | 0.491 | 227 s
 model_upd | 0.4888 | 231 s
 model_upd | 0.4681 | 229 s
+transformer_optim | 0.5303 | 6441 s
+arcface | 0.5468 | 6542 s
+arcface_subcenter | 0.5484 | 6662 s

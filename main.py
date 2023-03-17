@@ -51,4 +51,4 @@ if __name__ == '__main__':
     print(f'Total Time: {t} s')
 
     with open('results.txt', 'a') as file:
-        file.write(f'{config.general.experiment_name} | {cv} | {t} s\n')
+        file.write(f'\n{config.general.experiment_name} | {cv} | {t} s\n')

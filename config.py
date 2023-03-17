@@ -2,23 +2,23 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'model_upd',
+        'experiment_name': 'arcface',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
     'paths': {
         'path_to_csv': '/home/toefl/K/asl-signs/train.csv',
-        'path_to_data': './feature_data/feature_data.npy',
-        'path_to_labels': './feature_data/feature_labels.npy',
+        'path_to_data': './feature_data/feature_data.pickle',
+        'path_to_labels': './feature_data/feature_labels.pickle',
         'path_to_json': '/home/toefl/K/asl-signs/sign_to_prediction_index_map.json',
         'path_to_folder': '/home/toefl/K/asl-signs/',
         'pq_path': '/home/toefl/K/asl-signs/train_landmark_files/53618/1001379621.parquet',
         'path_to_checkpoints': './checkpoints/${general.experiment_name}',
     },
     'training': {
-        'num_epochs': 100,
+        'num_epochs': 40,
         'early_stopping_epochs': 100,
-        'lr': 0.003,
+        'lr': 1e-4,
 
         'mixed_precision': True,
         'gradient_accumulation': False,
@@ -41,11 +41,12 @@ config = {
         'resume_from_latest_checkpoint': False,
     },
     'dataloader_params': {
-        'batch_size': 4096,
-        'num_workers': 8,
+        'batch_size': 64,
+        'num_workers': 16,
         'pin_memory': False,
         'persistent_workers': True,
         'shuffle': True,
+        'drop_last': True,
     },
     'split': {
         'n_splits': 5,
@@ -54,21 +55,21 @@ config = {
     },
     'model': {           
         'freeze_batchnorms': False,
-        'converter_sample_input_shape': [50, 543, 2],
-        'model_sample_input_shape': [1, 472],
+        'converter_sample_input_shape': [60, 543, 2],
+        'model_sample_input_shape': [60, 82, 2],
         'params': {
-            "in_features": 472,
-            "first_out_features": 1024,
-            "num_classes": '${general.num_classes}',
-            "num_blocks": 3,
-            "drop_rate": 0.4,
+            "max_length": 60,
+            "embed_dim": 512, 
+            "num_point": 82,
+            "num_head": 4,
+            "num_class": '${general.num_classes}',
+            "num_block": 1, 
         },
     },
     'optimizer': {
-        'name': 'Adam',
+        'name': '/custom/Ranger',
         'params': {
             'lr': '${training.lr}',
-            'weight_decay': 1e-4,
         },
     },
     'scheduler': {
@@ -80,10 +81,13 @@ config = {
         },
     },
     'loss': {
-        'name': 'CrossEntropyLoss',
+        'name': '/custom/ArcFaceLoss',
         'params': {
-            'reduction': 'mean'
-        },
+            's': 45,
+            'm': 0.4,
+            'crit': "bce",
+            'class_weights_norm': "batch",
+        }
     },
     'metric': {
         'name': 'accuracy_score',
@@ -91,7 +95,7 @@ config = {
         },
     },
     'logging': {
-        'prints': False,
+        'prints': True,
         'txt_file': True,
         'wandb': False,
         'wandb_username': 'toefl',

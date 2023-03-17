@@ -1,5 +1,6 @@
 import torch
 import random
+import pickle
 import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset
@@ -18,7 +19,19 @@ class ISLDataset(Dataset):
         return len(self.labels)
 
     def __getitem__(self, i):
-        return self.data[i].astype(np.float32), torch.LongTensor([self.labels[i]])
+        return {
+            "features": torch.from_numpy(self.data[i]).float(),
+            "labels": self.labels[i],
+        }
+    
+
+def null_collate(batch):
+    d = {}
+    key = batch[0].keys()
+    for k in key:
+        d[k] = [b[k] for b in batch]
+    d['labels'] = torch.LongTensor(d['labels'])
+    return d
     
 
 def get_data_loader(config, data, labels):
@@ -26,6 +39,7 @@ def get_data_loader(config, data, labels):
     dataset = ISLDataset(config, data, labels)
     data_loader = torch.utils.data.DataLoader(
         dataset=dataset,
+        collate_fn=null_collate,
         **config.dataloader_params,
     )
     return data_loader
@@ -35,18 +49,29 @@ def get_fold_samples(config, current_fold):
     """Get a train and a val data for a single fold."""
 
     df = pd.read_csv(config.paths.path_to_csv)
-    data = np.load(config.paths.path_to_data)
-    labels =  np.load(config.paths.path_to_labels)
 
+    if config.paths.path_to_data.endswith('npy'):
+        data = np.load(config.paths.path_to_data)
+        labels =  np.load(config.paths.path_to_labels)
+    else:
+        with open(config.paths.path_to_data, 'rb') as file: data = pickle.load(file)
+        with open(config.paths.path_to_labels, 'rb') as file: labels = pickle.load(file)
+        
     # The dataframe is split in advantage
     if config.split.already_split:
         train_index = df.index[df["fold"] != current_fold]
         val_index = df.index[df["fold"] == current_fold]
 
-        train_data = data[train_index]
-        train_targets = labels[train_index]
-        val_data = data[val_index]
-        val_targets = labels[val_index]
+        if type(data) is np.ndarray:
+            train_data = data[train_index]
+            train_targets = labels[train_index]
+            val_data = data[val_index]
+            val_targets = labels[val_index]
+        else:
+            train_data = [data[i] for i in train_index]
+            train_targets = [labels[i] for i in train_index]
+            val_data = [data[i] for i in val_index]
+            val_targets = [labels[i] for i in val_index]
 
     # The dataframe isn't split in advantage
     else:
@@ -55,10 +80,16 @@ def get_fold_samples(config, current_fold):
         
         for fold, (train_index, val_index) in enumerate(kfold.split(data, labels, groups)):
             if fold == current_fold:
-                train_data = data[train_index]
-                train_targets = labels[train_index]
-                val_data = data[val_index]
-                val_targets = labels[val_index]
+                if type(data) is np.ndarray:
+                    train_data = data[train_index]
+                    train_targets = labels[train_index]
+                    val_data = data[val_index]
+                    val_targets = labels[val_index]
+                else:
+                    train_data = [data[i] for i in train_index]
+                    train_targets = [labels[i] for i in train_index]
+                    val_data = [data[i] for i in val_index]
+                    val_targets = [labels[i] for i in val_index]
                 break
     
     # The debug mode

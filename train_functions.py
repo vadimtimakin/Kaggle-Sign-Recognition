@@ -6,9 +6,10 @@ import wandb
 import numpy as np
 from tqdm import tqdm
 from torch.cuda import amp
+from torch.optim import RAdam
 
 from data import get_loaders
-from objects.model import ASLLinearModel
+from objects.model import BasedPartyNet
 from utils import save_log, save_model, print_report, draw_plots
 from utils import get_loss, get_metric,  get_optimizer, get_scheduler
 
@@ -36,23 +37,23 @@ def train(config, model, train_loader, optimizer, scheduler, loss_function, epoc
         train_loader = tqdm(train_loader)
 
     for step, batch in enumerate(train_loader):
-        inputs, labels = batch
-        inputs, labels = inputs.to(config.training.device), labels.squeeze(1).to(config.training.device)
+        batch["features"] = [i.to(config.training.device) for i in batch["features"]]
+        batch["labels"] = batch["labels"].to(config.training.device)
 
         if not config.training.gradient_accumulation:
             optimizer.zero_grad()
         
         if config.training.mixed_precision:
             with amp.autocast():
-                outputs = model(inputs.float())
-                loss = loss_function(outputs, labels)
+                outputs = model(batch["features"])
+                loss = loss_function(outputs, batch["labels"])
 
                 if config.training.gradient_accumulation:
                     loss = loss / config.training.gradient_accumulation_steps
         else:
-            outputs = model(inputs.float())
+            outputs = model(batch["features"])
 
-            loss = loss_function(outputs, labels)
+            loss = loss_function(outputs, batch["labels"])
 
         total_loss += loss.item()
 
@@ -114,15 +115,15 @@ def validation(config, model, val_loader, loss_function):
 
     with torch.no_grad():
         for batch in val_loader:
-            inputs, labels = batch
-            inputs, labels = inputs.to(config.training.device), labels.squeeze(1).to(config.training.device)
+            batch["features"] = [i.to(config.training.device) for i in batch["features"]]
+            batch["labels"] = batch["labels"].to(config.training.device)
 
-            outputs = model(inputs)
+            outputs = model(batch["features"])
 
             preds.append(outputs.sigmoid().to('cpu').numpy())
-            targets.append(labels.to('cpu').numpy())
+            targets.append(batch["labels"].to('cpu').numpy())
 
-            loss = loss_function(outputs, labels)
+            loss = loss_function(outputs, batch["labels"])
             total_loss += loss.item()
 
     return total_loss / len(val_loader), np.concatenate(preds), np.concatenate(targets)
@@ -146,7 +147,7 @@ def run(config, fold):
     train_loader, val_loader = get_loaders(config, fold)
 
     # Get objects
-    model = ASLLinearModel(config, **config.model.params).to(config.training.device)
+    model = BasedPartyNet(**config.model.params).to(config.training.device)
     optimizer = get_optimizer(config, model)
     scheduler = get_scheduler(config, optimizer)
     loss_function = get_loss(config)

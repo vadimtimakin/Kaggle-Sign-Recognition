@@ -26,9 +26,10 @@ lips = lipsUpperOuter + lipsLowerOuter + lipsUpperInner + lipsLowerInner
 class InputNet(nn.Module):
     def __init__(self, ):
         super().__init__()
-        self.max_length = 96
+        self.max_length = 60
   
     def forward(self, xyz):
+        xyz = xyz[:,:,:2]
         xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True)
         xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
 
@@ -38,13 +39,11 @@ class InputNet(nn.Module):
             78, 191, 80, 81, 82, 13, 312, 311, 310, 415,
             95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
         ]
-        #LHAND = np.arange(468, 489).tolist()
-        #RHAND = np.arange(522, 543).tolist()
 
         lip = xyz[:, LIP]
         lhand = xyz[:, 468:489]
         rhand = xyz[:, 522:543]
-        xyz = torch.cat([  # (none, 82, 3)
+        xyz = torch.cat([
             lip,
             lhand,
             rhand,
@@ -85,7 +84,6 @@ class FeatureGen(nn.Module):
         return xfeat
     
 feature_converter = InputNet()
-
 
 def load_relevant_data_subset(pq_path):
     data_columns = ["x", "y"]

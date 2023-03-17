@@ -3,13 +3,14 @@ import torch
 import numpy as np
 
 import onnx
+import onnxsim
 import tensorflow as tf
 from onnx_tf.backend import prepare
 import tflite_runtime.interpreter as tflite
 
 from config import config
-from objects.model import ASLLinearModel
-from generating_dataset import FeatureGen, load_relevant_data_subset
+from objects.model import SingleNet as BasedPartyNet
+from generating_dataset import InputNet, load_relevant_data_subset, FeatureGen
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -28,18 +29,27 @@ submission_path = "./inference_artifacts/submission.zip"
 
 # Feature converter
 
-feature_converter = FeatureGen()
+feature_converter = InputNet()
 feature_converter.eval()
 
 torch.onnx.export(
     feature_converter,  # PyTorch Model
     sample_input,  # Input tensor
     onnx_feat_gen_path,  # Output file (eg. 'output_model.onnx')
-    opset_version=12,  # Operator support version
-    input_names=["input"],  # Input tensor name (arbitary)
-    output_names=["output"],  # Output tensor name (arbitary)
-    dynamic_axes={"input": {0: "input"}},
+    export_params = True,         
+    opset_version = 12, 
+    do_constant_folding=True,      
+    input_names =  ['inputs'],     
+    output_names = ['outputs'],  
+    dynamic_axes={
+        'inputs': {0: 'length'},
+    },
 )
+
+model = onnx.load(onnx_feat_gen_path)
+onnx.checker.check_model(model)
+model_simple, check = onnxsim.simplify(model)
+onnx.save(model_simple, onnx_feat_gen_path)
 
 onnx_feat_gen = onnx.load(onnx_feat_gen_path)
 tf_rep = prepare(onnx_feat_gen)
@@ -48,7 +58,7 @@ tf_rep.export_graph(tf_feat_gen_path)
 # Initialize models
 
 for fold in range(config.split.n_splits):
-    model_infe = ASLLinearModel(config, **config.model.params)
+    model_infe = BasedPartyNet(**config.model.params)
     model_infe.load_state_dict(
         torch.load(f"{config.paths.path_to_checkpoints}/fold_{fold}/best.pt")["model"],
     )
@@ -62,11 +72,19 @@ for fold in range(config.split.n_splits):
         model_infe,  # PyTorch Model
         sample_input,  # Input tensor
         onnx_model_path.replace('N', str(fold)),  # Output file (eg. 'output_model.onnx')
-        opset_version=12,  # Operator support version
-        input_names=["input"],  # Input tensor name (arbitary)
-        output_names=["output"],  # Output tensor name (arbitary)
-        dynamic_axes={"input": {0: "input"}},
+        export_params = True,         
+        opset_version = 12, 
+        do_constant_folding=True,      
+        input_names =  ['inputs'],     
+        output_names = ['outputs'],  
+        dynamic_axes={
+            'inputs': {0: 'length'},
+        },
     )
+    model = onnx.load(onnx_model_path.replace('N', str(fold)))
+    onnx.checker.check_model(model)
+    model_simple, check = onnxsim.simplify(model)
+    onnx.save(model_simple, onnx_model_path.replace('N', str(fold)))
 
     onnx_model = onnx.load(onnx_model_path.replace('N', str(fold)))
     tf_rep = prepare(onnx_model)
@@ -88,12 +106,12 @@ class ASLInferModel(tf.Module):
             tf.TensorSpec(shape=[None, 543, 2], dtype=tf.float32, name="inputs")
         ]
     )
-    def call(self, input):
+    def call(self, inputs):
         output_tensors = {}
-        features = self.feature_gen(**{"input": input})["output"]
+        features = self.feature_gen(**{"inputs": inputs})["outputs"]
         output_tensors["outputs"] = tf.reduce_mean([self.models[f](
-            **{"input": tf.expand_dims(features, 0)}
-        )["output"][0, :] for f in range(config.split.n_splits)], axis=0)
+            **{"inputs": features}
+        )["outputs"][0, :] for f in range(config.split.n_splits)], axis=0)
         return output_tensors
 
 # Convert the model
@@ -106,6 +124,10 @@ tf.saved_model.save(
 )
 
 converter = tf.lite.TFLiteConverter.from_saved_model(tf_infer_model_path)
+# converter.target_spec.supported_ops = [
+#   tf.lite.OpsSet.TFLITE_BUILTINS, # enable TensorFlow Lite ops.
+#   tf.lite.OpsSet.SELECT_TF_OPS # enable TensorFlow ops.
+# ]
 tflite_model = converter.convert()
 
 # Save and test the model
