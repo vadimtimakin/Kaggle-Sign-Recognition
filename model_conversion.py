@@ -9,8 +9,8 @@ from onnx_tf.backend import prepare
 import tflite_runtime.interpreter as tflite
 
 from config import config
-from objects.model import SingleNet as BasedPartyNet
-from generating_dataset import InputNet, load_relevant_data_subset, FeatureGen
+from objects.model_inference import SingleNet as BasedPartyNet, InputNet
+from generating_dataset import load_relevant_data_subset
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -57,7 +57,7 @@ tf_rep.export_graph(tf_feat_gen_path)
 
 # Initialize models
 
-for fold in range(config.split.n_splits):
+for fold in [2]:
     model_infe = BasedPartyNet(**config.model.params)
     model_infe.load_state_dict(
         torch.load(f"{config.paths.path_to_checkpoints}/fold_{fold}/best.pt")["model"],
@@ -97,7 +97,7 @@ class ASLInferModel(tf.Module):
     def __init__(self):
         super(ASLInferModel, self).__init__()
         self.feature_gen = tf.saved_model.load(tf_feat_gen_path)
-        self.models = [tf.saved_model.load(tf_model_path.replace('N', str(f))) for f in range(config.split.n_splits)]
+        self.models = [tf.saved_model.load(tf_model_path.replace('N', str(f))) for f in [2]]
         self.feature_gen.trainable = False
         for model in self.models: model.trainable = False
 
@@ -111,7 +111,7 @@ class ASLInferModel(tf.Module):
         features = self.feature_gen(**{"inputs": inputs})["outputs"]
         output_tensors["outputs"] = tf.reduce_mean([self.models[f](
             **{"inputs": features}
-        )["outputs"][0, :] for f in range(config.split.n_splits)], axis=0)
+        )["outputs"][0, :] for f in [0]], axis=0)
         return output_tensors
 
 # Convert the model
@@ -124,10 +124,7 @@ tf.saved_model.save(
 )
 
 converter = tf.lite.TFLiteConverter.from_saved_model(tf_infer_model_path)
-# converter.target_spec.supported_ops = [
-#   tf.lite.OpsSet.TFLITE_BUILTINS, # enable TensorFlow Lite ops.
-#   tf.lite.OpsSet.SELECT_TF_OPS # enable TensorFlow ops.
-# ]
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
 tflite_model = converter.convert()
 
 # Save and test the model

@@ -5,6 +5,38 @@ import math
 import numpy as np
 
 
+class BoostedLoss(nn.modules.Module):
+    def __init__(self, s=45.0, m=0.1, crit="bce", class_weights_norm="batch"):
+        super().__init__()
+        self.arcface = ArcFaceLoss(s=s, m=m, crit=crit, class_weights_norm=class_weights_norm)
+        self.cross_entropy = nn.CrossEntropyLoss()
+       
+        
+    def forward(self, logits, labels, val=False):
+        if val:
+            loss = self.arcface(logits, labels)
+        else:
+            arcface_loss = self.arcface(logits[0], labels)
+            ce_loss = self.cross_entropy(logits[1], labels)
+            loss = arcface_loss * 0.1 + ce_loss * 0.9
+        return loss
+    
+
+class FocalLoss(nn.Module):
+
+    def __init__(self, gamma=0, eps=1e-7):
+        super(FocalLoss, self).__init__()
+        self.gamma = gamma
+        self.eps = eps
+        self.ce = torch.nn.CrossEntropyLoss(reduction="none")
+
+    def forward(self, input, target):
+        logp = self.ce(input, target)
+        p = torch.exp(-logp)
+        loss = (1 - p) ** self.gamma * logp
+        return loss.mean()
+
+
 class ArcFaceLoss(nn.modules.Module):
     def __init__(self, s=45.0, m=0.1, crit="bce", weight=None, reduction="mean",
                  focal_loss_gamma=0, class_weights_norm="batch"):

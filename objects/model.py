@@ -143,10 +143,19 @@ class BasedPartyNet(nn.Module):
         self.max_length = max_length
 
         self.pos_embed = nn.Parameter(pos_embed)
+        self.embed_dim = embed_dim
 
         self.cls_embed = nn.Parameter(torch.zeros((1, embed_dim)))
         self.x_embed = nn.Sequential(
-            nn.Linear(num_point * 2, embed_dim, bias=False),
+            nn.Linear(num_point * 2, embed_dim * 3),
+            nn.LayerNorm(embed_dim * 3),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+            nn.Linear(embed_dim * 3, embed_dim * 2),
+            nn.LayerNorm(embed_dim * 2),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+            nn.Linear(embed_dim * 2, embed_dim),
         )
 
         self.encoder = nn.ModuleList([
@@ -201,7 +210,15 @@ class SingleNet(nn.Module):
 
         self.cls_embed = nn.Parameter(torch.zeros((1, self.embed_dim)))
         self.x_embed = nn.Sequential(
-            nn.Linear(num_point * 2, self.embed_dim, bias=False),
+            nn.Linear(num_point * 2, embed_dim * 3),
+            nn.LayerNorm(embed_dim * 3),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+            nn.Linear(embed_dim * 3, embed_dim * 2),
+            nn.LayerNorm(embed_dim * 2),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+            nn.Linear(embed_dim * 2, embed_dim),
         )
 
         self.encoder = nn.ModuleList([
@@ -213,7 +230,7 @@ class SingleNet(nn.Module):
             ) for i in range(self.num_block)
         ])
         # self.logit = ArcMarginProduct(self.embed_dim, num_class)
-        # self.logit = nn.Linear(self.embed_dim, num_class)
+        # self.logit = nn.Linear(self.embed_dim, num_class)sss
         self.logit = ArcMarginProduct_subcenter(self.embed_dim, num_class)
 
     def forward(self, xyz):

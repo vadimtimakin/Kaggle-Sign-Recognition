@@ -1,5 +1,6 @@
 #pytorch model
 
+import math
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -20,8 +21,27 @@ class ArcMarginProduct(nn.Module):
         return cosine
     
 
+class ArcMarginProduct_subcenter(nn.Module):
+    def __init__(self, in_features, out_features, k=3):
+        super().__init__()
+        self.weight = nn.Parameter(torch.FloatTensor(out_features*k, in_features))
+        self.reset_parameters()
+        self.k = k
+        self.out_features = out_features
+        
+    def reset_parameters(self):
+        stdv = 1. / math.sqrt(self.weight.size(1))
+        self.weight.data.uniform_(-stdv, stdv)
+        
+    def forward(self, features):
+        cosine_all = F.linear(F.normalize(features), F.normalize(self.weight))
+        cosine_all = cosine_all.view(-1, self.out_features, self.k)
+        cosine, _ = torch.max(cosine_all, dim=2)
+        return cosine   
+    
+
 #num_landmark = 543
-max_length = 80
+max_length = 60
 num_class  = 250
 num_point  = 82  # LIP, LHAND, RHAND
 
@@ -113,70 +133,6 @@ class TransformerBlock(nn.Module):
         x = x + self.ffn((self.norm2(x)))
         return x
 
-class Net(nn.Module):
-
-    def __init__(self, num_class=num_class):
-        super().__init__()
-        self.output_type = ['inference', 'loss']
-
-        num_block = 1
-        embed_dim = 1024
-        num_head  = 8
-
-        pos_embed = positional_encoding(max_length, embed_dim)
-        # self.register_buffer('pos_embed', pos_embed)
-        self.pos_embed = nn.Parameter(pos_embed)
-
-        self.cls_embed = nn.Parameter(torch.zeros((1, embed_dim)))
-        self.x_embed = nn.Sequential(
-            nn.Linear(num_point * 3, embed_dim, bias=False),
-        )
-
-        self.encoder = nn.ModuleList([
-            TransformerBlock(
-                embed_dim,
-                num_head,
-                embed_dim,
-            ) for i in range(num_block)
-        ])
-        self.logit = nn.Linear(embed_dim, num_class)
-
-    def forward(self, batch):
-        length = [len(x) for x in batch['xyz']]
-        xyz = batch['xyz']
-
-        x, x_mask = pack_seq(xyz)
-        B,L,_ = x.shape
-        x = self.x_embed(x)
-        x = x + self.pos_embed[:L].unsqueeze(0)
-
-        x = torch.cat([
-            self.cls_embed.unsqueeze(0).repeat(B,1,1),
-            x
-        ],1)
-        x_mask = torch.cat([
-            torch.zeros(B,1).to(x_mask),
-            x_mask
-        ],1)
-
-
-        #x = F.dropout(x,p=0.25,training=self.training)
-        for block in self.encoder:
-            x = block(x,x_mask)
-
-        cls = x[:,0]
-        cls = F.dropout(cls,p=0.4,training=self.training)
-        logit = self.logit(cls)
-
-        output = {}
-        if 'loss' in self.output_type:
-            output['label_loss'] = F.cross_entropy(logit, batch['label'])
-
-        if 'inference' in self.output_type:
-            output['sign'] = torch.softmax(logit,-1)
-
-        return output
-
 
 def pre_process(xyz):
     xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdims=True) #noramlisation to common mean
@@ -203,15 +159,13 @@ def pre_process(xyz):
 
 #pytorch model for tflite conversion
 
-#simplfiy for one video input 
-max_length = 96  #reduce this if gets out of memory error
-
 class InputNet(nn.Module):
     def __init__(self, ):
         super().__init__()
         self.max_length = 60 
   
     def forward(self, xyz):
+        xyz = xyz[:self.max_length]
         xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True) #noramlisation to common maen
         xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
 
@@ -221,9 +175,7 @@ class InputNet(nn.Module):
             78, 191, 80, 81, 82, 13, 312, 311, 310, 415,
             95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
         ]
-        #LHAND = np.arange(468, 489).tolist()
-        #RHAND = np.arange(522, 543).tolist()
-
+        
         lip = xyz[:, LIP]
         lhand = xyz[:, 468:489]
         rhand = xyz[:, 522:543]
@@ -233,8 +185,7 @@ class InputNet(nn.Module):
             rhand,
         ], 1)
         xyz[torch.isnan(xyz)] = 0
-        x = xyz[:self.max_length]
-        return x
+        return xyz
 
 
 #overwrite the model used in training ....
@@ -248,8 +199,8 @@ class MultiHeadAttention(nn.Module):
         ):
         super().__init__()
         self.mha = nn.MultiheadAttention(
-            embed_dim,
-            num_heads=num_head,
+            512,
+            num_heads=4,
             bias=True,
             add_bias_kv=False,
             kdim=None,
@@ -259,40 +210,16 @@ class MultiHeadAttention(nn.Module):
         )
     #https://github.com/pytorch/text/blob/60907bf3394a97eb45056a237ca0d647a6e03216/torchtext/modules/multiheadattention.py#L5
     def forward(self, x):
-        # out,_ = self.mha(x,x,x,need_weights=False)
-        # out,_ = F.multi_head_attention_forward(
-        #     x, x, x,
-        #     self.mha.embed_dim,
-        #     self.mha.num_heads,
-        #     self.mha.in_proj_weight,
-        #     self.mha.in_proj_bias,
-        #     self.mha.bias_k,
-        #     self.mha.bias_v,
-        #     self.mha.add_zero_attn,
-        #     0,#self.mha.dropout,
-        #     self.mha.out_proj.weight,
-        #     self.mha.out_proj.bias,
-        #     training=False,
-        #     key_padding_mask=None,
-        #     need_weights=False,
-        #     attn_mask=None,
-        #     average_attn_weights=False
-        # )
- 
-        #qkv = F.linear(x, self.mha.in_proj_weight, self.mha.in_proj_bias)
-        #qkv = qkv.reshape(-1,3,1024)
-        #q,k,v = qkv[[0],0], qkv[:,1],  qkv[:,2]
-
-        q = F.linear(x[:1], self.mha.in_proj_weight[:1024], self.mha.in_proj_bias[:1024]) #since we need only cls
-        k = F.linear(x, self.mha.in_proj_weight[1024:2048], self.mha.in_proj_bias[1024:2048])
-        v = F.linear(x, self.mha.in_proj_weight[2048:], self.mha.in_proj_bias[2048:]) 
-        q = q.reshape(-1, 8, 128).permute(1, 0, 2)
-        k = k.reshape(-1, 8, 128).permute(1, 2, 0)
-        v = v.reshape(-1, 8, 128).permute(1, 0, 2)
+        q = F.linear(x[:1], self.mha.in_proj_weight[:512], self.mha.in_proj_bias[:512]) #since we need only cls
+        k = F.linear(x, self.mha.in_proj_weight[512:1024], self.mha.in_proj_bias[512:1024])
+        v = F.linear(x, self.mha.in_proj_weight[1024:], self.mha.in_proj_bias[1024:]) 
+        q = q.reshape(-1, 4, 128).permute(1, 0, 2)
+        k = k.reshape(-1, 4, 128).permute(1, 2, 0)
+        v = v.reshape(-1, 4, 128).permute(1, 0, 2)
         dot  = torch.matmul(q, k) * (1/128**0.5) # H L L
         attn = F.softmax(dot, -1)  #   L L
         out  = torch.matmul(attn, v)  #   L H dim
-        out  = out.permute(1, 0, 2).reshape(-1, 1024)
+        out  = out.permute(1, 0, 2).reshape(-1, 512)
         out  = F.linear(out, self.mha.out_proj.weight, self.mha.out_proj.bias)  
         return out
 
@@ -330,7 +257,15 @@ class SingleNet(nn.Module):
 
         self.cls_embed = nn.Parameter(torch.zeros((1, self.embed_dim)))
         self.x_embed = nn.Sequential(
-            nn.Linear(num_point * 2, self.embed_dim, bias=False),
+            nn.Linear(num_point * 2, embed_dim * 3),
+            nn.LayerNorm(embed_dim * 3),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+            nn.Linear(embed_dim * 3, embed_dim * 2),
+            nn.LayerNorm(embed_dim * 2),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+            nn.Linear(embed_dim * 2, embed_dim),
         )
 
         self.encoder = nn.ModuleList([
@@ -341,7 +276,7 @@ class SingleNet(nn.Module):
                 batch_first=False
             ) for i in range(self.num_block)
         ])
-        self.logit = ArcMarginProduct(self.embed_dim, num_class)
+        self.logit = ArcMarginProduct_subcenter(self.embed_dim, num_class)
 
     def forward(self, xyz):
         L = xyz.shape[0]
@@ -351,12 +286,8 @@ class SingleNet(nn.Module):
             self.cls_embed,
             x
         ],0)
-        #x = x.unsqueeze(1)
 
-        #for block in self.encoder: x = block(x) #remove tflite loop
         x = self.encoder[0](x)
         cls = x[[0]]
         logit = self.logit(cls)
         return logit
-    
-

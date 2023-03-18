@@ -14,3 +14,6 @@ model_upd | 0.4681 | 229 s
 transformer_optim | 0.5303 | 6441 s
 arcface | 0.5468 | 6542 s
 arcface_subcenter | 0.5484 | 6662 s
+deeper_embedding | 0.6042 | 7416 s
+
+arface_focal_loss | 0.6046 | 7672 s

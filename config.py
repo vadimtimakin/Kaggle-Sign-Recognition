@@ -2,14 +2,14 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'arcface',
+        'experiment_name': 'deeper_embedding',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
     'paths': {
         'path_to_csv': '/home/toefl/K/asl-signs/train.csv',
-        'path_to_data': './feature_data/feature_data.pickle',
-        'path_to_labels': './feature_data/feature_labels.pickle',
+        'path_to_data': './feature_data/feature_data_seq.pickle',
+        'path_to_labels': './feature_data/feature_labels_seq.pickle',
         'path_to_json': '/home/toefl/K/asl-signs/sign_to_prediction_index_map.json',
         'path_to_folder': '/home/toefl/K/asl-signs/',
         'pq_path': '/home/toefl/K/asl-signs/train_landmark_files/53618/1001379621.parquet',
@@ -85,7 +85,7 @@ config = {
         'params': {
             's': 45,
             'm': 0.4,
-            'crit': "bce",
+            'crit': 'bce',
             'class_weights_norm': "batch",
         }
     },
