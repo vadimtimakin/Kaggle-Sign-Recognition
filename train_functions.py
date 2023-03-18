@@ -6,7 +6,6 @@ import wandb
 import numpy as np
 from tqdm import tqdm
 from torch.cuda import amp
-from torch.optim import RAdam
 
 from data import get_loaders
 from objects.model import BasedPartyNet

@@ -22,9 +22,9 @@ onnx_feat_gen_path = "./inference_artifacts/feature_gen.onnx"
 tf_feat_gen_path = "./inference_artifacts/tf_feat_gen"
 tf_model_path = "./inference_artifacts/tf_model_N"
 onnx_model_path = "./inference_artifacts/asl_model_N.onnx"
-tflite_model_path = "./inference_artifacts/model.tflite"
+tflite_model_path = "model.tflite"
 tf_infer_model_path = "./inference_artifacts/tf_infer_model"
-submission_path = "./inference_artifacts/submission.zip"
+submission_path = "submission.zip"
 
 
 # Feature converter
@@ -103,7 +103,7 @@ class ASLInferModel(tf.Module):
 
     @tf.function(
         input_signature=[
-            tf.TensorSpec(shape=[None, 543, 2], dtype=tf.float32, name="inputs")
+            tf.TensorSpec(shape=[None, 543, 3], dtype=tf.float32, name="inputs")
         ]
     )
     def call(self, inputs):

@@ -55,7 +55,7 @@ config = {
     },
     'model': {           
         'freeze_batchnorms': False,
-        'converter_sample_input_shape': [60, 543, 2],
+        'converter_sample_input_shape': [60, 543, 3],
         'model_sample_input_shape': [60, 82, 2],
         'params': {
             "max_length": 60,

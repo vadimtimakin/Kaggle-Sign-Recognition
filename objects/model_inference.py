@@ -165,6 +165,7 @@ class InputNet(nn.Module):
         self.max_length = 60 
   
     def forward(self, xyz):
+        xyz = xyz[:,:,:2]
         xyz = xyz[:self.max_length]
         xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True) #noramlisation to common maen
         xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
