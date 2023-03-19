@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'deeper_embedding',
+        'experiment_name': 'swish',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -23,8 +23,8 @@ config = {
         'mixed_precision': True,
         'gradient_accumulation': False,
         'gradient_clipping': False,
-        'gradient_accumulation_steps': 2,
-        'clip_value': 1,
+        'gradient_accumulation_steps': 8,
+        'clip_value': 2,
         
         'warmup_scheduler': False,
         'warmup_epochs': 3,
@@ -42,7 +42,7 @@ config = {
     },
     'dataloader_params': {
         'batch_size': 64,
-        'num_workers': 16,
+        'num_workers': 8,
         'pin_memory': False,
         'persistent_workers': True,
         'shuffle': True,
@@ -51,6 +51,7 @@ config = {
     'split': {
         'n_splits': 5,
         'folds_to_train': [0, 1, 2, 3, 4],
+        'folds_to_submit': [2, 3, 4],
         'already_split': False,
     },
     'model': {           

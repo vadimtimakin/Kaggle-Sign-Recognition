@@ -49,8 +49,14 @@ class FeedForward(nn.Module):
     def __init__(self, embed_dim, hidden_dim):
         super().__init__()
         self.mlp = nn.Sequential(
-            nn.Linear(embed_dim, hidden_dim),
-            nn.ReLU(inplace=True),
+            nn.Linear(embed_dim , hidden_dim * 2),
+            nn.LayerNorm(hidden_dim * 2),
+            HardSwish(),
+            nn.Dropout(0.4),
+            nn.Linear(hidden_dim * 2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            HardSwish(),
+            nn.Dropout(0.4),
             nn.Linear(hidden_dim, embed_dim),
         )
     def forward(self, x):
@@ -149,11 +155,11 @@ class BasedPartyNet(nn.Module):
         self.x_embed = nn.Sequential(
             nn.Linear(num_point * 2, embed_dim * 3),
             nn.LayerNorm(embed_dim * 3),
-            nn.ReLU(),
+            HardSwish(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 3, embed_dim * 2),
             nn.LayerNorm(embed_dim * 2),
-            nn.ReLU(),
+            HardSwish(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 2, embed_dim),
         )
@@ -212,11 +218,11 @@ class SingleNet(nn.Module):
         self.x_embed = nn.Sequential(
             nn.Linear(num_point * 2, embed_dim * 3),
             nn.LayerNorm(embed_dim * 3),
-            nn.ReLU(),
+            HardSwish(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 3, embed_dim * 2),
             nn.LayerNorm(embed_dim * 2),
-            nn.ReLU(),
+            HardSwish(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 2, embed_dim),
         )

@@ -5,6 +5,8 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import torch.nn as nn
+import tensorflow as tf
+import keras
 
 
 class ArcMarginProduct(nn.Module):
@@ -159,35 +161,63 @@ def pre_process(xyz):
 
 #pytorch model for tflite conversion
 
-class InputNet(nn.Module):
-    def __init__(self, ):
-        super().__init__()
-        self.max_length = 60 
+# class InputNet(nn.Module):
+#     def __init__(self, ):
+#         super().__init__()
+#         self.max_length = 60 
   
-    def forward(self, xyz):
-        xyz = xyz[:,:,:2]
-        xyz = xyz[:self.max_length]
-        xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True) #noramlisation to common maen
-        xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
+#     def forward(self, xyz):
+#         xyz = xyz[:,:,:2]
+#         xyz = xyz[:self.max_length]
+#         xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True) #noramlisation to common maen
+#         xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
 
-        LIP = [
+#         LIP = [
+#             61, 185, 40, 39, 37, 0, 267, 269, 270, 409,
+#             291, 146, 91, 181, 84, 17, 314, 405, 321, 375,
+#             78, 191, 80, 81, 82, 13, 312, 311, 310, 415,
+#             95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
+#         ]
+        
+#         lip = xyz[:, LIP]
+#         lhand = xyz[:, 468:489]
+#         rhand = xyz[:, 522:543]
+#         xyz = torch.cat([  # (none, 82, 3)
+#             lip,
+#             lhand,
+#             rhand,
+#         ], 1)
+#         xyz[torch.isnan(xyz)] = 0
+#         return xyz
+
+
+class InputNet(tf.keras.layers.Layer):
+    def init(self):
+        super(InputNet, self).__init__()
+
+    def call(self, xyz):
+        xyz = xyz[:, :, :2]
+        xyz = xyz[:60]
+        xyz = xyz - tf.math.reduce_mean(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True) #noramlisation to common maen
+        xyz = xyz / tf.math.reduce_std(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True)
+
+        LIP = np.array([
             61, 185, 40, 39, 37, 0, 267, 269, 270, 409,
             291, 146, 91, 181, 84, 17, 314, 405, 321, 375,
             78, 191, 80, 81, 82, 13, 312, 311, 310, 415,
             95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
-        ]
-        
-        lip = xyz[:, LIP]
+        ])
+
+        lip = tf.gather(xyz, LIP, axis=1)
         lhand = xyz[:, 468:489]
         rhand = xyz[:, 522:543]
-        xyz = torch.cat([  # (none, 82, 3)
+        xyz = tf.concat([  # (none, 82, 3)
             lip,
             lhand,
             rhand,
         ], 1)
-        xyz[torch.isnan(xyz)] = 0
+        xyz = tf.where(tf.math.is_nan(xyz), tf.zeros_like(xyz), xyz)
         return xyz
-
 
 #overwrite the model used in training ....
 

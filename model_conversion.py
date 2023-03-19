@@ -30,34 +30,10 @@ submission_path = "submission.zip"
 # Feature converter
 
 feature_converter = InputNet()
-feature_converter.eval()
-
-torch.onnx.export(
-    feature_converter,  # PyTorch Model
-    sample_input,  # Input tensor
-    onnx_feat_gen_path,  # Output file (eg. 'output_model.onnx')
-    export_params = True,         
-    opset_version = 12, 
-    do_constant_folding=True,      
-    input_names =  ['inputs'],     
-    output_names = ['outputs'],  
-    dynamic_axes={
-        'inputs': {0: 'length'},
-    },
-)
-
-model = onnx.load(onnx_feat_gen_path)
-onnx.checker.check_model(model)
-model_simple, check = onnxsim.simplify(model)
-onnx.save(model_simple, onnx_feat_gen_path)
-
-onnx_feat_gen = onnx.load(onnx_feat_gen_path)
-tf_rep = prepare(onnx_feat_gen)
-tf_rep.export_graph(tf_feat_gen_path)
 
 # Initialize models
 
-for fold in [2]:
+for fold in config.split.folds_to_submit:
     model_infe = BasedPartyNet(**config.model.params)
     model_infe.load_state_dict(
         torch.load(f"{config.paths.path_to_checkpoints}/fold_{fold}/best.pt")["model"],
@@ -96,8 +72,8 @@ class ASLInferModel(tf.Module):
 
     def __init__(self):
         super(ASLInferModel, self).__init__()
-        self.feature_gen = tf.saved_model.load(tf_feat_gen_path)
-        self.models = [tf.saved_model.load(tf_model_path.replace('N', str(f))) for f in [2]]
+        self.feature_gen = feature_converter
+        self.models = [tf.saved_model.load(tf_model_path.replace('N', str(f))) for f in config.split.folds_to_submit]
         self.feature_gen.trainable = False
         for model in self.models: model.trainable = False
 
@@ -108,10 +84,10 @@ class ASLInferModel(tf.Module):
     )
     def call(self, inputs):
         output_tensors = {}
-        features = self.feature_gen(**{"inputs": inputs})["outputs"]
+        features = self.feature_gen(tf.cast(inputs, dtype=tf.float32))
         output_tensors["outputs"] = tf.reduce_mean([self.models[f](
             **{"inputs": features}
-        )["outputs"][0, :] for f in [0]], axis=0)
+        )["outputs"][0, :] for f in range(len(config.split.folds_to_submit))], axis=0)
         return output_tensors
 
 # Convert the model

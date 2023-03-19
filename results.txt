@@ -17,3 +17,7 @@ arcface_subcenter | 0.5484 | 6662 s
 deeper_embedding | 0.6042 | 7416 s
 
 arface_focal_loss | 0.6046 | 7672 s
+
+swish | 0.6105 | 7797 s
+
+gradient_accumulation | 0.6032 | 7801 s

@@ -85,7 +85,7 @@ def save_model(config, model, epoch, current_metric, optimizer, epochs_since_imp
         'optimizer': optimizer.state_dict(),
         'epochs_since_improvement': epochs_since_improvement,
         'scheduler': scheduler.state_dict(),
-        'scaler': scaler.state_dict(),
+        'scaler': scaler.state_dict() if scaler is not None else None,
         'best_metric': best_metric,
     }, os.path.join(config.paths.path_to_checkpoints, name))
 
