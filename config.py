@@ -2,14 +2,14 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': '100_epoch_classic',
+        'experiment_name': 'higher_embed_dim',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
     'paths': {
         'path_to_csv': '/home/toefl/K/asl-signs/train.csv',
-        'path_to_data': './feature_data/feature_data_seq.pickle',
-        'path_to_labels': './feature_data/feature_labels_seq.pickle',
+        'path_to_data': './feature_data/feature_data.pickle',
+        'path_to_labels': './feature_data/feature_labels.pickle',
         'path_to_json': '/home/toefl/K/asl-signs/sign_to_prediction_index_map.json',
         'path_to_folder': '/home/toefl/K/asl-signs/',
         'pq_path': '/home/toefl/K/asl-signs/train_landmark_files/53618/1001379621.parquet',
@@ -50,18 +50,18 @@ config = {
     },
     'split': {
         'n_splits': 5,
-        'folds_to_train': [2, 3, 4, 1, 0],
+        'folds_to_train': [2, 3, 4],
         'folds_to_submit': [2, 3, 4],
         'already_split': False,
     },
     'model': {           
         'freeze_batchnorms': False,
         'converter_sample_input_shape': [60, 543, 3],
-        'model_sample_input_shape': [60, 82, 2],
+        'model_sample_input_shape': [60, 1210],
         'params': {
             "max_length": 60,
-            "embed_dim": 512, 
-            "num_point": 82,
+            "embed_dim": 1024, 
+            "num_point": 605,
             "num_head": 4,
             "num_class": '${general.num_classes}',
             "num_block": 1, 
@@ -98,7 +98,7 @@ config = {
     'logging': {
         'prints': True,
         'txt_file': True,
-        'wandb': False,
+        'wandb': True,
         'wandb_username': 'toefl',
         'wandb_project_name': 'GISLR',
     }, 

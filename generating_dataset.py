@@ -66,6 +66,36 @@ class InputNet(nn.Module):
 
         x[np.isnan(x)] = 0
         return x
+    
+
+class SeqNet(nn.Module):
+    def __init__(self, ):
+        super().__init__()
+        self.max_length = 60
+  
+    def forward(self, xyz):
+        xyz = xyz[:,:,:2]
+        xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True)
+        xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
+
+        LIP = [
+            61, 185, 40, 39, 37, 0, 267, 269, 270, 409,
+            291, 146, 91, 181, 84, 17, 314, 405, 321, 375,
+            78, 191, 80, 81, 82, 13, 312, 311, 310, 415,
+            95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
+        ]
+
+        lip = xyz[:, LIP]
+        lhand = xyz[:, 468:489]
+        rhand = xyz[:, 522:543]
+        xyz = torch.cat([
+            lip,
+            lhand,
+            rhand,
+        ], 1)
+        xyz[torch.isnan(xyz)] = 0
+        x = xyz[:self.max_length]
+        return x
 
 
 class FeatureGen(nn.Module):

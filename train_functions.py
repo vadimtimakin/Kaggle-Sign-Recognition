@@ -245,7 +245,7 @@ def run(config, fold):
 
         if config.logging.txt_file:
             save_log(os.path.join(config.paths.path_to_checkpoints, "log.txt"), epoch + 1,
-                    train_loss ,val_loss, current_metric)
+                    train_loss ,val_loss, best_metric)
 
         if epochs_since_improvement == config.training.early_stopping_epochs:
             print('Training has been interrupted by early stopping.')

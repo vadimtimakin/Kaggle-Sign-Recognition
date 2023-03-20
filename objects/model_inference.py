@@ -42,6 +42,13 @@ class ArcMarginProduct_subcenter(nn.Module):
         return cosine   
     
 
+class HardSwish(nn.Module):
+    def __init__(self,):
+        super().__init__()
+    def forward(self, x):
+        return x * F.relu6(x+3) * 0.16666667
+    
+
 #num_landmark = 543
 max_length = 60
 num_class  = 250
@@ -69,8 +76,14 @@ class FeedForward(nn.Module):
     def __init__(self, embed_dim, hidden_dim):
         super().__init__()
         self.mlp = nn.Sequential(
-            nn.Linear(embed_dim, hidden_dim),
-            nn.ReLU(inplace=True),
+            nn.Linear(embed_dim , hidden_dim * 2),
+            nn.LayerNorm(hidden_dim * 2),
+            HardSwish(),
+            nn.Dropout(0.4),
+            nn.Linear(hidden_dim * 2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            HardSwish(),
+            nn.Dropout(0.4),
             nn.Linear(hidden_dim, embed_dim),
         )
     def forward(self, x):
@@ -216,8 +229,26 @@ class InputNet(tf.keras.layers.Layer):
             lhand,
             rhand,
         ], 1)
-        xyz = tf.where(tf.math.is_nan(xyz), tf.zeros_like(xyz), xyz)
-        return xyz
+
+        L = len(xyz)
+        dxyz = tf.pad(xyz[:-1] - xyz[1:],  [[0, 1], [0, 0], [0, 0]])
+
+        lhand = xyz[:, :21, :2]
+        ld = lhand[:, :, tf.newaxis, :] - lhand[:, tf.newaxis, :, :]
+        ld = tf.sqrt(tf.reduce_sum(ld ** 2, axis=-1))
+        rhand = xyz[:, 21:42, :2]
+        rd = rhand[:, :, tf.newaxis, :] - rhand[:, tf.newaxis, :, :]
+        rd = tf.sqrt(tf.reduce_sum(rd ** 2, axis=-1))
+
+        x = tf.concat([
+            tf.reshape(xyz, (L, -1)),
+            tf.reshape(dxyz, (L, -1)),
+            tf.reshape(rd, (L, -1)),
+            tf.reshape(ld, (L, -1)),
+        ], -1)
+        
+        x = tf.where(tf.math.is_nan(x), tf.zeros_like(x), x)
+        return x
 
 #overwrite the model used in training ....
 
@@ -290,11 +321,11 @@ class SingleNet(nn.Module):
         self.x_embed = nn.Sequential(
             nn.Linear(num_point * 2, embed_dim * 3),
             nn.LayerNorm(embed_dim * 3),
-            nn.ReLU(),
+            HardSwish(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 3, embed_dim * 2),
             nn.LayerNorm(embed_dim * 2),
-            nn.ReLU(),
+            HardSwish(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 2, embed_dim),
         )

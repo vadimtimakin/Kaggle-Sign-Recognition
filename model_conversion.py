@@ -45,7 +45,7 @@ for fold in config.split.folds_to_submit:
     model_infe.eval()
 
     torch.onnx.export(
-        model_infe,  # PyTorch Model
+        torch.jit.script(model_infe),  # PyTorch Model
         sample_input,  # Input tensor
         onnx_model_path.replace('N', str(fold)),  # Output file (eg. 'output_model.onnx')
         export_params = True,         
