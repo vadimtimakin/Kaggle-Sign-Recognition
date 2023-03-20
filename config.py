@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'swish',
+        'experiment_name': '100_epoch_classic',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -16,7 +16,7 @@ config = {
         'path_to_checkpoints': './checkpoints/${general.experiment_name}',
     },
     'training': {
-        'num_epochs': 40,
+        'num_epochs': 100,
         'early_stopping_epochs': 100,
         'lr': 1e-4,
 
@@ -50,7 +50,7 @@ config = {
     },
     'split': {
         'n_splits': 5,
-        'folds_to_train': [0, 1, 2, 3, 4],
+        'folds_to_train': [2, 3, 4, 1, 0],
         'folds_to_submit': [2, 3, 4],
         'already_split': False,
     },

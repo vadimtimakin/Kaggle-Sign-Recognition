@@ -34,6 +34,7 @@ class InputNet(nn.Module):
         super().__init__()
   
     def forward(self, xyz):
+        xyz = xyz[:60]
         xyz = xyz[:,:,:2]
         xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True)
         xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
@@ -64,7 +65,6 @@ class InputNet(nn.Module):
         ], -1)
 
         x[np.isnan(x)] = 0
-        print(x.shape)
         return x
 
 
@@ -125,11 +125,15 @@ def convert_and_save_data():
             npdata.append(x)
             nplabels.append(y)
 
-    with open('./feature_data/feature_data.pickle', 'wb') as file:
-        pickle.dump(npdata, file)
+    del df
 
     with open('./feature_data/feature_labels.pickle', 'wb') as file:
         pickle.dump(nplabels, file)
+
+    del nplabels
+
+    with open('./feature_data/feature_data.pickle', 'wb') as file:
+        pickle.dump(npdata, file)
 
 
 if __name__ == "__main__":  
