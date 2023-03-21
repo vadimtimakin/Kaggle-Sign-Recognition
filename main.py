@@ -2,6 +2,10 @@ import os
 import time
 import numpy as np
 
+import json
+import logging
+import tg_logger
+
 from config import config
 from utils import set_seed
 from train_functions import run
@@ -40,7 +44,7 @@ if __name__ == '__main__':
         scores.append(cur_score)
 
     print()
-    for fold in range(n_folds):
+    for fold in range(len(config.split.folds_to_train)):
         print(f'Fold: {fold} | Score: {round(scores[fold], 4)}')
 
     cv = round(sum(scores) / len(scores), 4)
@@ -52,3 +56,17 @@ if __name__ == '__main__':
 
     with open('results.txt', 'a') as file:
         file.write(f'\n{config.general.experiment_name} | {cv} | {t} s\n')
+
+    if config.logging.telegram:
+        with open('telegram_credits.json', 'r') as file:
+            tokens = json.load(file)
+
+        token = tokens["bot"]
+        users = [tokens["user"]]
+
+        logger = logging.getLogger('foo')
+        logger.setLevel(logging.INFO)
+
+        tg_logger.setup(logger, token=token, users=users)
+
+        logger.info(f'\n{config.general.experiment_name} | {cv} | {t} s\n')

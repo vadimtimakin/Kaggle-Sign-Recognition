@@ -23,3 +23,7 @@ swish | 0.6105 | 7797 s
 gradient_accumulation | 0.6032 | 7801 s
 
 100_epoch | 0.6265 | 20465 s
+
+double_layer | 0.003 | 97 s
+
+double_layer | 0.003 | 98 s

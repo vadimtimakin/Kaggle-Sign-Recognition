@@ -15,19 +15,13 @@ from config import config
 ROWS_PER_FRAME = 543
 label_map = json.load(open(config.paths.path_to_json, "r"))
 
-# https://www.kaggle.com/competitions/asl-signs/discussion/391812#2168354
-lipsUpperOuter =  [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291]
-lipsLowerOuter = [146, 91, 181, 84, 17, 314, 405, 321, 375, 291]
-lipsUpperInner = [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308]
-lipsLowerInner = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308]
-lips = lipsUpperOuter + lipsLowerOuter + lipsUpperInner + lipsLowerInner
-
 LIP = [
     61, 185, 40, 39, 37, 0, 267, 269, 270, 409,
     291, 146, 91, 181, 84, 17, 314, 405, 321, 375,
     78, 191, 80, 81, 82, 13, 312, 311, 310, 415,
     95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
 ]
+
 
 class InputNet(nn.Module):
     def __init__(self, ):
@@ -67,66 +61,6 @@ class InputNet(nn.Module):
         x[np.isnan(x)] = 0
         return x
     
-
-class SeqNet(nn.Module):
-    def __init__(self, ):
-        super().__init__()
-        self.max_length = 60
-  
-    def forward(self, xyz):
-        xyz = xyz[:,:,:2]
-        xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True)
-        xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
-
-        LIP = [
-            61, 185, 40, 39, 37, 0, 267, 269, 270, 409,
-            291, 146, 91, 181, 84, 17, 314, 405, 321, 375,
-            78, 191, 80, 81, 82, 13, 312, 311, 310, 415,
-            95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
-        ]
-
-        lip = xyz[:, LIP]
-        lhand = xyz[:, 468:489]
-        rhand = xyz[:, 522:543]
-        xyz = torch.cat([
-            lip,
-            lhand,
-            rhand,
-        ], 1)
-        xyz[torch.isnan(xyz)] = 0
-        x = xyz[:self.max_length]
-        return x
-
-
-class FeatureGen(nn.Module):
-    def __init__(self):
-        super(FeatureGen, self).__init__()
-        pass
-    
-    def forward(self, x):
-        x = x[:,:,:2]
-        lips_x = x[:,lips,:].contiguous().view(-1, 43*2)
-        lefth_x = x[:,468:489,:].contiguous().view(-1, 21*2)
-        pose_x = x[:,489:522,:].contiguous().view(-1, 33*2)
-        righth_x = x[:,522:,:].contiguous().view(-1, 21*2)
-        
-        lefth_x = lefth_x[~torch.any(torch.isnan(lefth_x), dim=1),:]
-        righth_x = righth_x[~torch.any(torch.isnan(righth_x), dim=1),:]
-        
-        x1m = torch.mean(lips_x, 0)
-        x2m = torch.mean(lefth_x, 0)
-        x3m = torch.mean(pose_x, 0)
-        x4m = torch.mean(righth_x, 0)
-        
-        x1s = torch.std(lips_x, 0)
-        x2s = torch.std(lefth_x, 0)
-        x3s = torch.std(pose_x, 0)
-        x4s = torch.std(righth_x, 0)
-        
-        xfeat = torch.cat([x1m,x2m,x3m,x4m, x1s,x2s,x3s,x4s], axis=0)
-        xfeat = torch.where(torch.isnan(xfeat), torch.tensor(0.0, dtype=torch.float32), xfeat)
-        
-        return xfeat
     
 feature_converter = InputNet()
 

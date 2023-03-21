@@ -56,8 +56,8 @@ config = {
     },
     'model': {           
         'freeze_batchnorms': False,
-        'converter_sample_input_shape': [60, 543, 3],
-        'model_sample_input_shape': [60, 1210],
+        'converter_sample_input_shape': [45, 543, 3],
+        'model_sample_input_shape': [45, 1210],
         'params': {
             "max_length": 60,
             "embed_dim": 1024, 
@@ -99,6 +99,7 @@ config = {
         'prints': True,
         'txt_file': True,
         'wandb': True,
+        'telegram': True,
         'wandb_username': 'toefl',
         'wandb_project_name': 'GISLR',
     }, 

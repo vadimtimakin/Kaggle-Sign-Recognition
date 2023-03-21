@@ -3,3 +3,4 @@ inference_artifacts/
 wandb/
 feature_data/
 __pycache__/
+telegram_credits.json

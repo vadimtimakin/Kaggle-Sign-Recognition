@@ -5,20 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class ArcMarginProduct(nn.Module):
-    def __init__(self, in_features, out_features):
-        super().__init__()
-        self.weight = nn.Parameter(torch.Tensor(out_features, in_features))
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        nn.init.xavier_uniform_(self.weight)
-
-    def forward(self, features):
-        cosine = F.linear(F.normalize(features), F.normalize(self.weight))
-        return cosine
-    
-
 class ArcMarginProduct_subcenter(nn.Module):
     def __init__(self, in_features, out_features, k=3):
         super().__init__()
@@ -107,10 +93,10 @@ class TransformerBlock(nn.Module):
 
 def positional_encoding(length, embed_dim):
     dim = embed_dim//2
-    position = np.arange(length)[:, np.newaxis]     # (seq, 1)
-    dim = np.arange(dim)[np.newaxis, :]/dim   # (1, dim)
-    angle = 1 / (10000**dim)         # (1, dim)
-    angle = position * angle    # (pos, dim)
+    position = np.arange(length)[:, np.newaxis]
+    dim = np.arange(dim)[np.newaxis, :]/dim
+    angle = 1 / (10000**dim)
+    angle = position * angle
     pos_embed = np.concatenate(
         [np.sin(angle), np.cos(angle)],
         axis=-1
@@ -138,7 +124,6 @@ def pack_seq(
     x = x.reshape(batch_size,-1,K*2)
     return x, x_mask
 
-#########################################################################
 
 class BasedPartyNet(nn.Module):
 
@@ -172,8 +157,6 @@ class BasedPartyNet(nn.Module):
                 embed_dim,
             ) for i in range(num_block)
         ])
-        # self.logit = ArcMarginProduct(self.embed_dim, num_class)
-        # self.logit = nn.Linear(self.embed_dim, num_class)
         self.logit = ArcMarginProduct_subcenter(self.embed_dim, num_class)
 
     def forward(self, inputs):
@@ -199,57 +182,4 @@ class BasedPartyNet(nn.Module):
         cls = F.dropout(cls,p=0.4,training=self.training)
         logit = self.logit(cls)
 
-        return logit
-    
-
-class SingleNet(nn.Module):
-
-    def __init__(self, max_length, embed_dim, num_point, num_head, num_class, num_block):
-        super().__init__()
-        self.num_block = num_block
-        self.embed_dim = embed_dim
-        self.num_head  = num_head
-        self.max_length = max_length
-        self.num_point = num_point
-
-        pos_embed = positional_encoding(max_length, self.embed_dim)
-        self.pos_embed = nn.Parameter(pos_embed)
-
-        self.cls_embed = nn.Parameter(torch.zeros((1, self.embed_dim)))
-        self.x_embed = nn.Sequential(
-            nn.Linear(num_point * 2, embed_dim * 3),
-            nn.LayerNorm(embed_dim * 3),
-            HardSwish(),
-            nn.Dropout(0.4),
-            nn.Linear(embed_dim * 3, embed_dim * 2),
-            nn.LayerNorm(embed_dim * 2),
-            HardSwish(),
-            nn.Dropout(0.4),
-            nn.Linear(embed_dim * 2, embed_dim),
-        )
-
-        self.encoder = nn.ModuleList([
-            TransformerBlock(
-                self.embed_dim,
-                self.num_head,
-                self.embed_dim,
-                batch_first=False
-            ) for i in range(self.num_block)
-        ])
-        # self.logit = ArcMarginProduct(self.embed_dim, num_class)
-        # self.logit = nn.Linear(self.embed_dim, num_class)sss
-        self.logit = ArcMarginProduct_subcenter(self.embed_dim, num_class)
-
-    def forward(self, xyz):
-        L = xyz.shape[0]
-        x_embed = self.x_embed(xyz.flatten(1)) 
-        x = x_embed[:L] + self.pos_embed[:L]
-        x = torch.cat([
-            self.cls_embed,
-            x
-        ],0)
-
-        x = self.encoder[0](x)
-        cls = x[[0]]
-        logit = self.logit(cls)
         return logit
