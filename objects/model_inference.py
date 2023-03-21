@@ -49,10 +49,6 @@ class HardSwish(nn.Module):
         return x * F.relu6(x+3) * 0.16666667
     
 
-#num_landmark = 543
-max_length = 60
-num_class  = 250
-num_point  = 82  # LIP, LHAND, RHAND
 
 def pack_seq(
     seq,
@@ -78,11 +74,11 @@ class FeedForward(nn.Module):
         self.mlp = nn.Sequential(
             nn.Linear(embed_dim , hidden_dim * 2),
             nn.LayerNorm(hidden_dim * 2),
-            HardSwish(),
+            nn.ReLU(),
             nn.Dropout(0.4),
             nn.Linear(hidden_dim * 2, hidden_dim),
             nn.LayerNorm(hidden_dim),
-            HardSwish(),
+            nn.ReLU(),
             nn.Dropout(0.4),
             nn.Linear(hidden_dim, embed_dim),
         )
@@ -169,7 +165,7 @@ def pre_process(xyz):
         rhand,
     ],1)
     xyz[torch.isnan(xyz)] = 0
-    xyz = xyz[:max_length]
+    xyz = xyz[:60]
     return xyz
 
 #pytorch model for tflite conversion
@@ -261,7 +257,7 @@ class MultiHeadAttention(nn.Module):
         ):
         super().__init__()
         self.mha = nn.MultiheadAttention(
-            512,
+            1024,
             num_heads=4,
             bias=True,
             add_bias_kv=False,
@@ -272,16 +268,16 @@ class MultiHeadAttention(nn.Module):
         )
     #https://github.com/pytorch/text/blob/60907bf3394a97eb45056a237ca0d647a6e03216/torchtext/modules/multiheadattention.py#L5
     def forward(self, x):
-        q = F.linear(x[:1], self.mha.in_proj_weight[:512], self.mha.in_proj_bias[:512]) #since we need only cls
-        k = F.linear(x, self.mha.in_proj_weight[512:1024], self.mha.in_proj_bias[512:1024])
-        v = F.linear(x, self.mha.in_proj_weight[1024:], self.mha.in_proj_bias[1024:]) 
-        q = q.reshape(-1, 4, 128).permute(1, 0, 2)
-        k = k.reshape(-1, 4, 128).permute(1, 2, 0)
-        v = v.reshape(-1, 4, 128).permute(1, 0, 2)
+        q = F.linear(x[:1], self.mha.in_proj_weight[:1024], self.mha.in_proj_bias[:1024]) #since we need only cls
+        k = F.linear(x, self.mha.in_proj_weight[1024:2048], self.mha.in_proj_bias[1024:2048])
+        v = F.linear(x, self.mha.in_proj_weight[2048:], self.mha.in_proj_bias[2048:]) 
+        q = q.reshape(-1, 8, 128).permute(1, 0, 2)
+        k = k.reshape(-1, 8, 128).permute(1, 2, 0)
+        v = v.reshape(-1, 8, 128).permute(1, 0, 2)
         dot  = torch.matmul(q, k) * (1/128**0.5) # H L L
         attn = F.softmax(dot, -1)  #   L L
         out  = torch.matmul(attn, v)  #   L H dim
-        out  = out.permute(1, 0, 2).reshape(-1, 512)
+        out  = out.permute(1, 0, 2).reshape(-1, 1024)
         out  = F.linear(out, self.mha.out_proj.weight, self.mha.out_proj.bias)  
         return out
 
@@ -321,11 +317,11 @@ class SingleNet(nn.Module):
         self.x_embed = nn.Sequential(
             nn.Linear(num_point * 2, embed_dim * 3),
             nn.LayerNorm(embed_dim * 3),
-            HardSwish(),
+            nn.ReLU(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 3, embed_dim * 2),
             nn.LayerNorm(embed_dim * 2),
-            HardSwish(),
+            nn.ReLU(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 2, embed_dim),
         )

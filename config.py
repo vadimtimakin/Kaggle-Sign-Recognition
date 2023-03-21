@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'higher_embed_dim',
+        'experiment_name': 'double_layer',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -18,7 +18,7 @@ config = {
     'training': {
         'num_epochs': 100,
         'early_stopping_epochs': 100,
-        'lr': 1e-4,
+        'lr': 1e-4 / 100,
 
         'mixed_precision': True,
         'gradient_accumulation': False,
@@ -26,9 +26,9 @@ config = {
         'gradient_accumulation_steps': 8,
         'clip_value': 2,
         
-        'warmup_scheduler': False,
-        'warmup_epochs': 3,
-        'warmup_multiplier': 1,
+        'warmup_scheduler': True,
+        'warmup_epochs': 5,
+        'warmup_multiplier': 100,
 
         'debug': False,
         'number_of_train_debug_samples': 5000,
@@ -50,8 +50,8 @@ config = {
     },
     'split': {
         'n_splits': 5,
-        'folds_to_train': [2, 3, 4],
-        'folds_to_submit': [2, 3, 4],
+        'folds_to_train': [2],
+        'folds_to_submit': [2],
         'already_split': False,
     },
     'model': {           
@@ -62,9 +62,9 @@ config = {
             "max_length": 60,
             "embed_dim": 1024, 
             "num_point": 605,
-            "num_head": 4,
+            "num_head": 8,
             "num_class": '${general.num_classes}',
-            "num_block": 1, 
+            "num_block": 2, 
         },
     },
     'optimizer': {
@@ -77,7 +77,7 @@ config = {
         'name': 'CosineAnnealingLR', 
         'interval': 'epoch',
         'params': {
-            'T_max': '${training.num_epochs}',
+            'T_max': 95,
             'eta_min': 1e-7,
         },
     },

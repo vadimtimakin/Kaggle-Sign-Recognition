@@ -20,6 +20,24 @@ class BoostedLoss(nn.modules.Module):
             ce_loss = self.cross_entropy(logits[1], labels)
             loss = arcface_loss * 0.1 + ce_loss * 0.9
         return loss
+
+
+class LabelSmoothingLoss(nn.Module):
+
+    def __init__(self, classes, smoothing=0.0, dim=-1):
+        super(LabelSmoothingLoss, self).__init__()
+        self.confidence = 1.0 - smoothing
+        self.smoothing = smoothing
+        self.cls = classes
+        self.dim = dim
+
+    def forward(self, pred, target):
+        pred = pred.log_softmax(dim=self.dim)
+        with torch.no_grad():
+            true_dist = torch.zeros_like(pred)
+            true_dist.fill_(self.smoothing / (self.cls - 1))
+            true_dist.scatter_(1, target.data.unsqueeze(1), self.confidence)
+        return torch.mean(torch.sum(-true_dist * pred, dim=self.dim))
     
 
 class FocalLoss(nn.Module):
@@ -49,7 +67,8 @@ class ArcFaceLoss(nn.modules.Module):
         if crit == "focal":
             self.crit = FocalLoss(gamma=focal_loss_gamma)
         elif crit == "bce":
-            self.crit = nn.CrossEntropyLoss(reduction="none")   
+            # self.crit = nn.CrossEntropyLoss(reduction="none")   
+            self.crit = LabelSmoothingLoss(250, 0.05)
 
         if s is None:
             self.s = torch.nn.Parameter(torch.tensor([45.], requires_grad=True, device='cuda'))
