@@ -1,6 +1,7 @@
 import os
 import torch
 import numpy as np
+from tqdm import tqdm
 
 import onnx
 import onnxsim
@@ -11,6 +12,8 @@ import tflite_runtime.interpreter as tflite
 from config import config
 from objects.model_inference import SingleNet as BasedPartyNet, InputNet
 from generating_dataset import load_relevant_data_subset
+
+from torch.profiler import profile, record_function, ProfilerActivity
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -25,7 +28,6 @@ onnx_model_path = "./inference_artifacts/asl_model_N.onnx"
 tflite_model_path = "model.tflite"
 tf_infer_model_path = "./inference_artifacts/tf_infer_model"
 submission_path = "submission.zip"
-
 
 # Feature converter
 
@@ -43,9 +45,20 @@ for fold in config.split.folds_to_submit:
     sample_input = torch.rand(list(config.model.model_sample_input_shape)).to(config.training.device)
 
     model_infe.eval()
+    model_infe = torch.jit.script(model_infe)
+
+    with torch.no_grad():
+        for _ in tqdm(range(100)):
+            _ = model_infe(sample_input)
+
+    with profile(activities=[ProfilerActivity.CUDA], record_shapes=True) as prof:
+        with record_function("model_inference"):
+            model_infe(sample_input)
+
+    print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
 
     torch.onnx.export(
-        torch.jit.script(model_infe),  # PyTorch Model
+        model_infe,  # PyTorch Model
         sample_input,  # Input tensor
         onnx_model_path.replace('N', str(fold)),  # Output file (eg. 'output_model.onnx')
         export_params = True,         

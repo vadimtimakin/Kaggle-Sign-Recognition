@@ -4,3 +4,5 @@ wandb/
 feature_data/
 __pycache__/
 telegram_credits.json
+model.tflite
+submission.zip
