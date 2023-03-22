@@ -91,7 +91,6 @@ class InputNet(tf.keras.layers.Layer):
 
     def call(self, xyz):
         xyz = xyz[:, :, :2]
-        xyz = xyz[:45]
         xyz = xyz - tf.math.reduce_mean(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True) #noramlisation to common maen
         xyz = xyz / tf.math.reduce_std(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True)
 
@@ -129,6 +128,7 @@ class InputNet(tf.keras.layers.Layer):
         ], -1)
         
         x = tf.where(tf.math.is_nan(x), tf.zeros_like(x), x)
+        x = x[:60]
         return x
 
 #overwrite the model used in training ....
@@ -160,10 +160,10 @@ class MultiHeadAttention(nn.Module):
         k = F.linear(x, self.mha.in_proj_weight[self.embed_dim:self.embed_dim * 2], 
                         self.mha.in_proj_bias[self.embed_dim:self.embed_dim * 2])
         v = F.linear(x, self.mha.in_proj_weight[self.embed_dim * 2:], self.mha.in_proj_bias[self.embed_dim * 2:]) 
-        q = q.reshape(-1, self.num_head, self.embed_dim / self.num_head).permute(1, 0, 2)
-        k = k.reshape(-1, self.num_head, self.embed_dim / self.num_head).permute(1, 2, 0)
-        v = v.reshape(-1, self.num_head, self.embed_dim / self.num_head).permute(1, 0, 2)
-        dot  = torch.matmul(q, k) * (1/(self.embed_dim / self.num_head)**0.5) # H L L
+        q = q.reshape(-1, self.num_head, self.embed_dim // self.num_head).permute(1, 0, 2)
+        k = k.reshape(-1, self.num_head, self.embed_dim // self.num_head).permute(1, 2, 0)
+        v = v.reshape(-1, self.num_head, self.embed_dim // self.num_head).permute(1, 0, 2)
+        dot  = torch.matmul(q, k) * (1/(self.embed_dim // self.num_head)**0.5) # H L L
         attn = F.softmax(dot, -1)  #   L L
         out  = torch.matmul(attn, v)  #   L H dim
         out  = out.permute(1, 0, 2).reshape(-1, self.embed_dim)

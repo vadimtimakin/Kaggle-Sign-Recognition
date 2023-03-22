@@ -27,3 +27,9 @@ gradient_accumulation | 0.6032 | 7801 s
 double_layer | 0.003 | 97 s
 
 double_layer | 0.003 | 98 s
+
+double_layer | 0.6739 | 8115 s
+
+max_length_100 | 0.6908 | 6789 s
+
+lower_embed_heads | 0.6801 | 5050 s

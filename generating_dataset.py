@@ -28,7 +28,7 @@ class InputNet(nn.Module):
         super().__init__()
   
     def forward(self, xyz):
-        xyz = xyz[:60]
+        xyz = xyz[:100]
         xyz = xyz[:,:,:2]
         xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True)
         xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)

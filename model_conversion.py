@@ -57,10 +57,13 @@ for fold in config.split.folds_to_submit:
             'inputs': {0: 'length'},
         },
     )
+
+    print("Model's Size (MB):", os.path.getsize(onnx_model_path.replace('N', str(fold)))/1e6)
     model = onnx.load(onnx_model_path.replace('N', str(fold)))
     onnx.checker.check_model(model)
     model_simple, check = onnxsim.simplify(model)
     onnx.save(model_simple, onnx_model_path.replace('N', str(fold)))
+    print("Model's Size (MB):", os.path.getsize(onnx_model_path.replace('N', str(fold)))/1e6)
 
     onnx_model = onnx.load(onnx_model_path.replace('N', str(fold)))
     tf_rep = prepare(onnx_model)
