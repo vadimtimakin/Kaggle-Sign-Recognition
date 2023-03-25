@@ -10,8 +10,9 @@ from sklearn.model_selection import StratifiedGroupKFold
 class ISLDataset(Dataset):
     """The Isolated Sign Language Dataset."""
     
-    def __init__(self, config, data, labels):
+    def __init__(self, config, is_train, data, labels):
         self.data = data
+        self.is_train = is_train
         self.labels = labels
         self.config = config
 
@@ -19,8 +20,16 @@ class ISLDataset(Dataset):
         return len(self.labels)
 
     def __getitem__(self, i):
+        features = torch.from_numpy(self.data[i]).float()
+
+        if self.is_train:
+            n = features.shape[0]
+            num_to_drop = int(n * 0.4)
+            indices_to_drop = torch.randperm(n)[:num_to_drop]
+            features = features[torch.sort(indices_to_drop)[0]]
+
         return {
-            "features": torch.from_numpy(self.data[i]).float(),
+            "features": features,
             "labels": self.labels[i],
         }
     
@@ -34,9 +43,9 @@ def null_collate(batch):
     return d
     
 
-def get_data_loader(config, data, labels):
+def get_data_loader(config, is_train, data, labels):
     """Gets a PyTorch Dataloader."""
-    dataset = ISLDataset(config, data, labels)
+    dataset = ISLDataset(config, is_train, data, labels)
     data_loader = torch.utils.data.DataLoader(
         dataset=dataset,
         collate_fn=null_collate,
@@ -112,12 +121,14 @@ def get_loaders(config, fold):
 
     train_loader = get_data_loader(
         config=config,
+        is_train=True,
         data=train_data,
         labels=train_targets,
     )
 
     val_loader = get_data_loader(
         config=config,
+        is_train=False,
         data=val_data,
         labels=val_targets,
     )

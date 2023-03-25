@@ -33,3 +33,11 @@ double_layer | 0.6739 | 8115 s
 max_length_100 | 0.6908 | 6789 s
 
 lower_embed_heads | 0.6801 | 5050 s
+
+max_len_100 | 0.6696 | 18495 s
+
+embed_256 | 0.635 | 26329 s
+
+num_head_8 | 0.6428 | 24595 s
+
+16_heads | 0.6643 | 30919 s

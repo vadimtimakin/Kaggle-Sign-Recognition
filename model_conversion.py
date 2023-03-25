@@ -1,4 +1,5 @@
 import os
+import time
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -12,8 +13,6 @@ import tflite_runtime.interpreter as tflite
 from config import config
 from objects.model_inference import SingleNet as BasedPartyNet, InputNet
 from generating_dataset import load_relevant_data_subset
-
-from torch.profiler import profile, record_function, ProfilerActivity
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -50,12 +49,6 @@ for fold in config.split.folds_to_submit:
     with torch.no_grad():
         for _ in tqdm(range(100)):
             _ = model_infe(sample_input)
-
-    with profile(activities=[ProfilerActivity.CUDA], record_shapes=True) as prof:
-        with record_function("model_inference"):
-            model_infe(sample_input)
-
-    print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
 
     torch.onnx.export(
         model_infe,  # PyTorch Model
@@ -100,7 +93,9 @@ class ASLInferModel(tf.Module):
     )
     def call(self, inputs):
         output_tensors = {}
+        start = time.time()
         features = self.feature_gen(tf.cast(inputs, dtype=tf.float32))
+        start = time.time()
         output_tensors["outputs"] = tf.reduce_mean([self.models[f](
             **{"inputs": features}
         )["outputs"][0, :] for f in range(len(config.split.folds_to_submit))], axis=0)
@@ -130,9 +125,13 @@ interpreter.allocate_tensors()
 found_signatures = list(interpreter.get_signature_list().keys())
 
 prediction_fn = interpreter.get_signature_runner("serving_default")
-output = prediction_fn(inputs=load_relevant_data_subset(config.paths.pq_path))
-sign = np.argmax(output["outputs"])
 
+start = time.time()
+for _ in tqdm(range(100)):
+    output = prediction_fn(inputs=load_relevant_data_subset(config.paths.pq_path))
+    sign = np.argmax(output["outputs"])
+
+print(time.time() - start)
 print(sign, output["outputs"].shape)
-
 os.system(f'zip {submission_path} {tflite_model_path}')
+print("Model's Size (MB):", os.path.getsize('submission.zip')/1e6)
