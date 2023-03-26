@@ -28,10 +28,8 @@ class InputNet(nn.Module):
         super().__init__()
   
     def forward(self, xyz):
-        xyz = xyz[:100]
+        xyz = xyz[:60]
         xyz = xyz[:,:,:2]
-        xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True)
-        xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
 
         lip = xyz[:, LIP]
         lhand = xyz[:, 468:489]
@@ -41,6 +39,10 @@ class InputNet(nn.Module):
             lhand,
             rhand,
         ], 1)
+        
+        xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True)
+        xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
+
         L = len(xyz)
         dxyz = np.pad(xyz[:-1] - xyz[1:],  [[0, 1], [0, 0], [0, 0]])
 
@@ -63,6 +65,7 @@ class InputNet(nn.Module):
     
     
 feature_converter = InputNet()
+
 
 def load_relevant_data_subset(pq_path):
     data_columns = ["x", "y"]

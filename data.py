@@ -22,11 +22,11 @@ class ISLDataset(Dataset):
     def __getitem__(self, i):
         features = torch.from_numpy(self.data[i]).float()
 
-        if self.is_train:
-            n = features.shape[0]
-            num_to_drop = int(n * 0.4)
-            indices_to_drop = torch.randperm(n)[:num_to_drop]
-            features = features[torch.sort(indices_to_drop)[0]]
+        # if self.is_train:
+        #     n = features.shape[0]
+        #     num_to_drop = int(n * 0.4)
+        #     indices_to_drop = torch.randperm(n)[:num_to_drop]
+        #     features = features[torch.sort(indices_to_drop)[0]]
 
         return {
             "features": features,

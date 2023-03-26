@@ -2,14 +2,14 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'frame_drop_04',
+        'experiment_name': 'dim_384',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
     'paths': {
         'path_to_csv': '/home/toefl/K/asl-signs/train.csv',
-        'path_to_data': './feature_data/feature_data.pickle',
-        'path_to_labels': './feature_data/feature_labels.pickle',
+        'path_to_data': './feature_data/feature_data_dist.pickle',
+        'path_to_labels': './feature_data/feature_labels_dist.pickle',
         'path_to_json': '/home/toefl/K/asl-signs/sign_to_prediction_index_map.json',
         'path_to_folder': '/home/toefl/K/asl-signs/',
         'pq_path': '/home/toefl/K/asl-signs/train_landmark_files/53618/1001379621.parquet',
@@ -50,8 +50,8 @@ config = {
     },
     'split': {
         'n_splits': 5,
-        'folds_to_train': [2, 3, 4, 0, 1],
-        'folds_to_submit': [2, 3],
+        'folds_to_train': [3, 4, 0, 1],
+        'folds_to_submit': [2, 3, 4],
         'already_split': False,
     },
     'model': {           
@@ -60,7 +60,7 @@ config = {
         'model_sample_input_shape': [100, 1210],
         'params': {
             "max_length": 100,
-            "embed_dim": 512, 
+            "embed_dim": 384, 
             "num_point": 605,
             "num_head": 16,
             "num_class": '${general.num_classes}',

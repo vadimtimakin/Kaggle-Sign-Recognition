@@ -12,3 +12,6 @@
 #     xyz[torch.isnan(xyz)] = 0
 #     xyz = xyz[:max_length]
 #     return xyz
+
+# xyz = (xyz.permute(1, 0, 2) - torch.min(xyz, dim=1).values) / (torch.max(xyz, dim=1).values - torch.min(xyz, dim=1).values)
+# xyz = xyz.permute(1, 0, 2)

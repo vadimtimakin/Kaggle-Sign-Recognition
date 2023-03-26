@@ -11,7 +11,7 @@ class InputNet(tf.keras.layers.Layer):
         super(InputNet, self).__init__()
 
     def call(self, xyz):
-        xyz = xyz[:100]
+        xyz = xyz[:60]
         xyz = xyz[:, :, :2]
         xyz = xyz - tf.math.reduce_mean(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True)
         xyz = xyz / tf.math.reduce_std(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True)
