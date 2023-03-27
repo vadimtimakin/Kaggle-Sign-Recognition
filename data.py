@@ -58,6 +58,7 @@ def get_fold_samples(config, current_fold):
     """Get a train and a val data for a single fold."""
 
     df = pd.read_csv(config.paths.path_to_csv)
+    df = df[df["participant_id"] != 29302]
 
     if config.paths.path_to_data.endswith('npy'):
         data = np.load(config.paths.path_to_data)

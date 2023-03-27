@@ -1,7 +1,6 @@
-import torch
-import numpy as np
+import pandas as pd
 
-a = torch.ones([23, 82, 2])
-b = torch.min(a, dim=1).values
-c = a.permute(1, 0, 2) - b
-print(c.shape)
+df = pd.read_csv('/home/toefl/K/asl-signs/train.csv')
+print(len(df))
+df = df[df["participant_id"] != 29302]
+print(len(df))

@@ -34,6 +34,7 @@ class InputNet(nn.Module):
         lip = xyz[:, LIP]
         lhand = xyz[:, 468:489]
         rhand = xyz[:, 522:543]
+
         xyz = torch.cat([
             lip,
             lhand,
@@ -83,6 +84,7 @@ def convert_row(row):
 
 def convert_and_save_data():
     df = pd.read_csv(config.paths.path_to_csv)
+    df = df[df["participant_id"] != 29302]
     df['label'] = df['sign'].map(label_map)
     npdata = []
     nplabels = []
@@ -94,14 +96,16 @@ def convert_and_save_data():
 
     del df
 
-    with open('./feature_data/feature_labels.pickle', 'wb') as file:
+    with open('./feature_data/feature_labels_drop.pickle', 'wb') as file:
         pickle.dump(nplabels, file)
 
     del nplabels
 
-    with open('./feature_data/feature_data.pickle', 'wb') as file:
+    with open('./feature_data/feature_data_drop.pickle', 'wb') as file:
         pickle.dump(npdata, file)
 
 
 if __name__ == "__main__":  
     convert_and_save_data()
+    # x = load_relevant_data_subset(os.path.join(config.paths.path_to_folder, '/home/toefl/K/asl-signs/train_landmark_files/53618/1001379621.parquet'))
+    # x = feature_converter(torch.tensor(x))
