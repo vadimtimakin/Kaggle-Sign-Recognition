@@ -3,34 +3,41 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import MessagePassing
+from torch.nn import Parameter
 
-class EdgeConv(MessagePassing):
-    def __init__(self, in_channels, embed_dim):
-        super().__init__(aggr="max")  # "Max" aggregation.
-        self.mlp = nn.Sequential(
-            nn.Linear(in_channels * 2, embed_dim * 3),
-            nn.LayerNorm(embed_dim * 3),
-            HardSwish(),
-            nn.Dropout(0.4),
-            nn.Linear(embed_dim * 3, embed_dim * 2),
-            nn.LayerNorm(embed_dim * 2),
-            HardSwish(),
-            nn.Dropout(0.4),
-            nn.Linear(embed_dim * 2, embed_dim),
-        )
 
-    def forward(self, x: torch.Tensor, edge_index=[2, 605]) -> torch.Tensor:
-        # x: Node feature matrix of shape [num_nodes, in_channels]
-        # edge_index: Graph connectivity matrix of shape [2, num_edges]
-        x = torch.IntTensor(x, device='cuda')
-        return self.propagate(edge_index, x=x)  # shape [num_nodes, out_channels]
+class AdaCos(nn.Module):
+    def __init__(self, num_features, num_classes, m=0.50):
+        super(AdaCos, self).__init__()
+        self.num_features = num_features
+        self.n_classes = num_classes
+        self.s = math.sqrt(2) * math.log(num_classes - 1)
+        self.m = m
+        self.W = Parameter(torch.FloatTensor(num_classes, num_features))
+        nn.init.xavier_uniform_(self.W)
 
-    def message(self, x_j: torch.Tensor, x_i: torch.Tensor) -> torch.Tensor:
-        # x_j: Source node features of shape [num_edges, in_channels]
-        # x_i: Target node features of shape [num_edges, in_channels]
-        edge_features = torch.cat([x_i, x_j - x_i], dim=-1)
-        return self.mlp(edge_features)  # shape [num_edges, out_channels]
+    def forward(self, input, label=None):
+        # normalize features
+        x = F.normalize(input)
+        # normalize weights
+        W = F.normalize(self.W)
+        # dot product
+        logits = F.linear(x, W)
+        if label is None:
+            return logits
+        # feature re-scale
+        theta = torch.acos(torch.clamp(logits, -1.0 + 1e-7, 1.0 - 1e-7))
+        one_hot = torch.zeros_like(logits)
+        one_hot.scatter_(1, label.view(-1, 1).long(), 1)
+        with torch.no_grad():
+            B_avg = torch.where(one_hot < 1, torch.exp(self.s * logits), torch.zeros_like(logits))
+            B_avg = torch.sum(B_avg) / input.size(0)
+            # print(B_avg)
+            theta_med = torch.median(theta[one_hot == 1])
+            self.s = torch.log(B_avg) / torch.cos(torch.min(math.pi/4 * torch.ones_like(theta_med), theta_med))
+        output = self.s * logits
+
+        return output
 
 
 class ArcMarginProduct_subcenter(nn.Module):
@@ -166,7 +173,17 @@ class BasedPartyNet(nn.Module):
         self.embed_dim = embed_dim
 
         self.cls_embed = nn.Parameter(torch.zeros((1, embed_dim)))
-        self.x_embed = EdgeConv(num_point, embed_dim)
+        self.x_embed = nn.Sequential(
+            nn.Linear(num_point * 2, embed_dim * 3),
+            nn.LayerNorm(embed_dim * 3),
+            HardSwish(),
+            nn.Dropout(0.4),
+            nn.Linear(embed_dim * 3, embed_dim * 2),
+            nn.LayerNorm(embed_dim * 2),
+            HardSwish(),
+            nn.Dropout(0.4),
+            nn.Linear(embed_dim * 2, embed_dim),
+        )
 
         self.encoder = nn.ModuleList([
             TransformerBlock(

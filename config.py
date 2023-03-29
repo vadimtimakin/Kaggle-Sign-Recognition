@@ -2,14 +2,14 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'gnn',
+        'experiment_name': 'ms_loss',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
     'paths': {
         'path_to_csv': '/home/toefl/K/asl-signs/train.csv',
-        'path_to_data': './feature_data/feature_data_drop.pickle',
-        'path_to_labels': './feature_data/feature_labels_drop.pickle',
+        'path_to_data': './feature_data/feature_data_dist.pickle',
+        'path_to_labels': './feature_data/feature_labels_dist.pickle',
         'path_to_json': '/home/toefl/K/asl-signs/sign_to_prediction_index_map.json',
         'path_to_folder': '/home/toefl/K/asl-signs/',
         'pq_path': '/home/toefl/K/asl-signs/train_landmark_files/53618/1001379621.parquet',
@@ -56,8 +56,8 @@ config = {
     },
     'model': {           
         'freeze_batchnorms': False,
-        'converter_sample_input_shape': [100, 543, 3],
-        'model_sample_input_shape': [100, 1210],
+        'converter_sample_input_shape': [60, 543, 3],
+        'model_sample_input_shape': [60, 1210],
         'params': {
             "max_length": 100,
             "embed_dim": 512, 
@@ -82,12 +82,12 @@ config = {
         },
     },
     'loss': {
-        'name': '/custom/ArcFaceLoss',
+        'name': '/custom/MultiSimilarityLoss',
         'params': {
-            's': 45,
-            'm': 0.4,
-            'crit': 'bce',
-            'class_weights_norm': "batch",
+            # 's': 30,
+            # 'm': 0.5,
+            # 'crit': 'bce',
+            # 'class_weights_norm': "batch",
         }
     },
     'metric': {
@@ -98,7 +98,7 @@ config = {
     'logging': {
         'prints': True,
         'txt_file': True,
-        'wandb': True,
+        'wandb': False,
         'telegram': True,
         'wandb_username': 'toefl',
         'wandb_project_name': 'GISLR',

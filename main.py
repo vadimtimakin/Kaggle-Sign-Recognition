@@ -55,6 +55,9 @@ if __name__ == '__main__':
         final_score += cur_score / n_folds
         scores.append(cur_score)
 
+        if config.logging.telegram:
+            logger.info(f'Fold: {fold} | Score: {round(cur_score, 4)}')
+
     print()
     for fold in range(len(config.split.folds_to_train)):
         print(f'Fold: {fold} | Score: {round(scores[fold], 4)}')

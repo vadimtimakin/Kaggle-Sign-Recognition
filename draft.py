@@ -1,6 +1,4 @@
-import pandas as pd
+import torch
 
-df = pd.read_csv('/home/toefl/K/asl-signs/train.csv')
-print(len(df))
-df = df[df["participant_id"] != 29302]
-print(len(df))
+a = torch.ones((64, 101, 512))
+print(torch.cat((a, a),dim =2).shape)
