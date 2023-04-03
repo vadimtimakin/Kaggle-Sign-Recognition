@@ -49,3 +49,5 @@ drop_one | 0.6644 | 24190 s
 lstm_upd | 0.6069 | 31826 s
 
 relu_and_60 | 0.642 | 24242 s
+
+arcface_tuned_4 | 0.6412 | 24449 s

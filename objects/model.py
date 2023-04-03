@@ -72,11 +72,11 @@ class FeedForward(nn.Module):
         self.mlp = nn.Sequential(
             nn.Linear(embed_dim , hidden_dim * 2),
             nn.LayerNorm(hidden_dim * 2),
-            HardSwish(),
+            nn.ReLU(),
             nn.Dropout(0.4),
             nn.Linear(hidden_dim * 2, hidden_dim),
             nn.LayerNorm(hidden_dim),
-            HardSwish(),
+            nn.ReLU(),
             nn.Dropout(0.4),
             nn.Linear(hidden_dim, embed_dim),
         )
@@ -176,11 +176,11 @@ class BasedPartyNet(nn.Module):
         self.x_embed = nn.Sequential(
             nn.Linear(num_point * 2, embed_dim * 3),
             nn.LayerNorm(embed_dim * 3),
-            HardSwish(),
+            nn.ReLU(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 3, embed_dim * 2),
             nn.LayerNorm(embed_dim * 2),
-            HardSwish(),
+            nn.ReLU(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 2, embed_dim),
         )

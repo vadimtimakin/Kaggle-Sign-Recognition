@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'ms_loss',
+        'experiment_name': 'arcface_tuned_4',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -59,7 +59,7 @@ config = {
         'converter_sample_input_shape': [60, 543, 3],
         'model_sample_input_shape': [60, 1210],
         'params': {
-            "max_length": 100,
+            "max_length": 60,
             "embed_dim": 512, 
             "num_point": 605,
             "num_head": 16,
@@ -82,12 +82,12 @@ config = {
         },
     },
     'loss': {
-        'name': '/custom/MultiSimilarityLoss',
+        'name': '/custom/ArcFaceLoss',
         'params': {
-            # 's': 30,
-            # 'm': 0.5,
-            # 'crit': 'bce',
-            # 'class_weights_norm': "batch",
+            's': 45,
+            'm': 0.4,
+            'crit': 'bce',
+            'class_weights_norm': "batch",
         }
     },
     'metric': {
@@ -98,7 +98,7 @@ config = {
     'logging': {
         'prints': True,
         'txt_file': True,
-        'wandb': False,
+        'wandb': True,
         'telegram': True,
         'wandb_username': 'toefl',
         'wandb_project_name': 'GISLR',
