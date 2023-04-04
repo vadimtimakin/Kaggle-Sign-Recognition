@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'arcface_tuned_4',
+        'experiment_name': 'augs_plus',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -51,21 +51,27 @@ config = {
     'split': {
         'n_splits': 5,
         'folds_to_train': [2, 3, 4, 0, 1],
-        'folds_to_submit': [2, 3],
+        'folds_to_submit': [2, 3, 4],
         'already_split': False,
     },
     'model': {           
         'freeze_batchnorms': False,
         'converter_sample_input_shape': [60, 543, 3],
-        'model_sample_input_shape': [60, 1210],
+        'model_sample_input_shape': [60, 102, 2],
         'params': {
             "max_length": 60,
             "embed_dim": 512, 
-            "num_point": 605,
+            "num_point": 102,
             "num_head": 16,
             "num_class": '${general.num_classes}',
             "num_block": 1, 
         },
+    },
+    'augmentations': {
+        'scale': (0.8,1.5),
+        'shift': (-0.1,0.1),
+        'degree': (-15,15),
+        'p': 0.5,
     },
     'optimizer': {
         'name': '/custom/Ranger',

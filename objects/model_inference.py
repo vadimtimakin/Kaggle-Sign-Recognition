@@ -6,51 +6,55 @@ import torch.nn as nn
 import tensorflow as tf
 
 
-class InputNet(tf.keras.layers.Layer):
-    def init(self):
+class InputNet(tf.keras.Model):
+    def __init__(self):
         super(InputNet, self).__init__()
+        self.NORM_REF = np.array([500, 501, 512, 513, 159, 386, 13])
+        self.LHAND = np.array(tf.range(468, 489))
+        self.RHAND = np.array(tf.range(522, 543))
+        self.REYE = np.array([
+            33, 7, 163, 144, 145, 153, 154, 155, 133,
+            246, 161, 160, 159, 158, 157, 173,
+        ])
+        self.LEYE = np.array([
+            263, 249, 390, 373, 374, 380, 381, 382, 362,
+            466, 388, 387, 386, 385, 384, 398,
+        ])
+        self.SLIP = np.array([
+            78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
+            191, 80, 81, 82, 13, 312, 311, 310, 415,
+        ])
+        self.SPOSE = np.array((
+            tf.constant([11, 13, 15, 12, 14, 16, 23, 24])
+            + 489
+        ))
 
     def call(self, xyz):
         xyz = xyz[:60]
         xyz = xyz[:, :, :2]
-        xyz = xyz - tf.math.reduce_mean(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True)
-        xyz = xyz / tf.math.reduce_std(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True)
 
-        LIP = np.array([
-            61, 185, 40, 39, 37, 0, 267, 269, 270, 409,
-            291, 146, 91, 181, 84, 17, 314, 405, 321, 375,
-            78, 191, 80, 81, 82, 13, 312, 311, 310, 415,
-            95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
-        ])
+        K = xyz.shape[-1]
+        ref = tf.gather(xyz, self.NORM_REF, axis=1)
+        xyz_flat = tf.reshape(ref, (-1, K))
+        m = tf.math.reduce_mean(xyz_flat, axis=0, keepdims=True)
+        s = tf.math.reduce_mean(tf.math.reduce_std(xyz_flat, axis=0))
+        xyz = xyz - m
+        xyz = xyz / s
 
-        lip = tf.gather(xyz, LIP, axis=1)
-        lhand = xyz[:, 468:489]
-        rhand = xyz[:, 522:543]
-        xyz = tf.concat([  # (none, 82, 3)
-            lip,
-            lhand,
-            rhand,
-        ], 1)
+        lhand = tf.gather(xyz, self.LHAND, axis=1)
+        rhand = tf.gather(xyz, self.RHAND, axis=1)
+        spose = tf.gather(xyz, self.SPOSE, axis=1)
+        leye = tf.gather(xyz, self.LEYE, axis=1)
+        reye = tf.gather(xyz, self.REYE, axis=1)
+        slip = tf.gather(xyz, self.SLIP, axis=1)
 
-        L = len(xyz)
-        dxyz = tf.pad(xyz[:-1] - xyz[1:],  [[0, 1], [0, 0], [0, 0]])
+        xyz = tf.concat(
+            [lhand, rhand, spose, leye, reye, slip],
+            axis=1,
+        )
 
-        lhand = xyz[:, :21, :2]
-        ld = lhand[:, :, tf.newaxis, :] - lhand[:, tf.newaxis, :, :]
-        ld = tf.sqrt(tf.reduce_sum(ld ** 2, axis=-1))
-        rhand = xyz[:, 21:42, :2]
-        rd = rhand[:, :, tf.newaxis, :] - rhand[:, tf.newaxis, :, :]
-        rd = tf.sqrt(tf.reduce_sum(rd ** 2, axis=-1))
-
-        x = tf.concat([
-            tf.reshape(xyz, (L, -1)),
-            tf.reshape(dxyz, (L, -1)),
-            tf.reshape(rd, (L, -1)),
-            tf.reshape(ld, (L, -1)),
-        ], -1)
-        
-        x = tf.where(tf.math.is_nan(x), tf.zeros_like(x), x)
-        return x
+        xyz = tf.where(tf.math.is_nan(xyz), tf.zeros_like(xyz), xyz)
+        return xyz
     
 
 class ArcMarginProduct_subcenter(nn.Module):
@@ -200,7 +204,7 @@ class SingleNet(nn.Module):
     def forward(self, xyz):
         with torch.no_grad():
             L = xyz.shape[0]
-            xyz = xyz.reshape(xyz.shape[0], xyz.shape[1] // 2, 2)
+            # xyz = xyz.reshape(xyz.shape[0], xyz.shape[1] // 2, 2)
             x_embed = self.x_embed(xyz.flatten(1)) 
             x = torch.cat([
                 self.cls_embed,

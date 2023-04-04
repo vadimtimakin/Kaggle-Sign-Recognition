@@ -51,3 +51,5 @@ lstm_upd | 0.6069 | 31826 s
 relu_and_60 | 0.642 | 24242 s
 
 arcface_tuned_4 | 0.6412 | 24449 s
+
+augmentations | 0.6353 | 25314 s

@@ -143,7 +143,7 @@ def positional_encoding(length, embed_dim):
 def pack_seq(
     seq, max_length,
 ):
-    seq = [s.reshape(s.shape[0], s.shape[1] // 2, 2) for s in seq]
+    # seq = [s.reshape(s.shape[0], s.shape[1] // 2, 2) for s in seq]
     length = [min(len(s), max_length)  for s in seq]
     batch_size = len(seq)
     K = seq[0].shape[1]
