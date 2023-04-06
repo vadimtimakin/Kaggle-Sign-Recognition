@@ -13,6 +13,10 @@ from train_functions import run
 import warnings
 warnings.filterwarnings('ignore')
 
+import resource
+rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+resource.setrlimit(resource.RLIMIT_NOFILE, (32768, rlimit[1]))
+
 if __name__ == '__main__':
     set_seed(config.general.seed)
 

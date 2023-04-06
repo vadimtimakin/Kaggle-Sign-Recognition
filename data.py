@@ -72,13 +72,15 @@ class ISLDataset(Dataset):
         return data.astype(np.float32)
 
     def normalise(self, xyz):
-        K = xyz.shape[-1]
-        ref = xyz[:, self.norm_ref]
-        xyz_flat = ref.reshape(-1,K)
-        m = np.nanmean(xyz_flat,0).reshape(1,1,K)
-        s = np.nanstd(xyz_flat, 0).mean() 
-        xyz = xyz - m
-        xyz = xyz / s
+        # K = xyz.shape[-1]
+        # ref = xyz[:, self.norm_ref]
+        # xyz_flat = ref.reshape(-1,K)
+        # m = np.nanmean(xyz_flat,0).reshape(1,1,K)
+        # s = np.nanstd(xyz_flat, 0).mean() 
+        # xyz = xyz - m
+        # xyz = xyz / s
+        xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True)
+        xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
         return xyz
 
     def preprocess(self, xyz):
@@ -147,8 +149,11 @@ class ISLDataset(Dataset):
         pq_file = f'{self.config.paths.path_to_folder}{sample.path}'
         xyz = self.load_relevant_data_subset(pq_file)
 
-        xyz = self.normalise(xyz)
+        xyz = xyz[:60]
+        xyz = xyz[:, :, :2]
+
         xyz = torch.from_numpy(xyz).float()
+        xyz = self.normalise(xyz)
         xyz = self.preprocess(xyz)
 
         if self.is_train:

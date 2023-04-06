@@ -110,7 +110,7 @@ class ArcFaceLoss(nn.modules.Module):
         if crit == "focal":
             self.crit = FocalLoss(gamma=focal_loss_gamma)
         elif crit == "bce":
-            self.crit = LabelSmoothingLoss(250, 0.1)
+            self.crit = LabelSmoothingLoss(250, 0.2)
 
         if s is None:
             self.s = torch.nn.Parameter(torch.tensor([45.], requires_grad=True, device='cuda'))

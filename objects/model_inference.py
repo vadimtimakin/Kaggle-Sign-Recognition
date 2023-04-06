@@ -32,14 +32,16 @@ class InputNet(tf.keras.Model):
     def call(self, xyz):
         xyz = xyz[:60]
         xyz = xyz[:, :, :2]
-
-        K = xyz.shape[-1]
-        ref = tf.gather(xyz, self.NORM_REF, axis=1)
-        xyz_flat = tf.reshape(ref, (-1, K))
-        m = tf.math.reduce_mean(xyz_flat, axis=0, keepdims=True)
-        s = tf.math.reduce_mean(tf.math.reduce_std(xyz_flat, axis=0))
-        xyz = xyz - m
-        xyz = xyz / s
+        
+        xyz = xyz - tf.math.reduce_mean(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True)
+        xyz = xyz / tf.math.reduce_std(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True)
+        # K = xyz.shape[-1]
+        # ref = tf.gather(xyz, self.NORM_REF, axis=1)
+        # xyz_flat = tf.reshape(ref, (-1, K))
+        # m = tf.math.reduce_mean(xyz_flat, axis=0, keepdims=True)
+        # s = tf.math.reduce_mean(tf.math.reduce_std(xyz_flat, axis=0))
+        # xyz = xyz - m
+        # xyz = xyz / s
 
         lhand = tf.gather(xyz, self.LHAND, axis=1)
         rhand = tf.gather(xyz, self.RHAND, axis=1)
@@ -80,15 +82,9 @@ class FeedForward(nn.Module):
     def __init__(self, embed_dim, hidden_dim):
         super().__init__()
         self.mlp = nn.Sequential(
-            nn.Linear(embed_dim , hidden_dim * 2),
-            nn.LayerNorm(hidden_dim * 2),
-            nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(hidden_dim * 2, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(hidden_dim, embed_dim),
+            nn.Linear(embed_dim, hidden_dim),
+			nn.Hardswish(inplace=True),
+			nn.Linear(hidden_dim, embed_dim),
         )
     def forward(self, x):
         return self.mlp(x)
@@ -182,11 +178,11 @@ class SingleNet(nn.Module):
         self.x_embed = nn.Sequential(
             nn.Linear(num_point * 2, embed_dim * 3),
             nn.LayerNorm(embed_dim * 3),
-            nn.ReLU(),
+            nn.Hardswish(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 3, embed_dim * 2),
             nn.LayerNorm(embed_dim * 2),
-            nn.ReLU(),
+            nn.Hardswish(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 2, embed_dim),
         )

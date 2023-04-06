@@ -59,26 +59,13 @@ class ArcMarginProduct_subcenter(nn.Module):
         return cosine   
 
 
-class HardSwish(nn.Module):
-    def __init__(self,):
-        super().__init__()
-    def forward(self, x):
-        return x * F.relu6(x+3) * 0.16666667
-
-
 class FeedForward(nn.Module):
     def __init__(self, embed_dim, hidden_dim):
         super().__init__()
         self.mlp = nn.Sequential(
-            nn.Linear(embed_dim , hidden_dim * 2),
-            nn.LayerNorm(hidden_dim * 2),
-            nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(hidden_dim * 2, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(hidden_dim, embed_dim),
+            nn.Linear(embed_dim, hidden_dim),
+			nn.Hardswish(inplace=True),
+			nn.Linear(hidden_dim, embed_dim),
         )
     def forward(self, x):
         return self.mlp(x)
@@ -176,11 +163,11 @@ class BasedPartyNet(nn.Module):
         self.x_embed = nn.Sequential(
             nn.Linear(num_point * 2, embed_dim * 3),
             nn.LayerNorm(embed_dim * 3),
-            nn.ReLU(),
+            nn.Hardswish(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 3, embed_dim * 2),
             nn.LayerNorm(embed_dim * 2),
-            nn.ReLU(),
+            nn.Hardswish(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 2, embed_dim),
         )

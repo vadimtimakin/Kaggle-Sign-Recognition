@@ -53,3 +53,5 @@ relu_and_60 | 0.642 | 24242 s
 arcface_tuned_4 | 0.6412 | 24449 s
 
 augmentations | 0.6353 | 25314 s
+
+augs_plus_plus | 0.6369 | 31865 s
