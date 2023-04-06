@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'swish_rerun_norm',
+        'experiment_name': 'model_update',
         'seed': 0xFACED,
         'num_classes': 250, 
     },

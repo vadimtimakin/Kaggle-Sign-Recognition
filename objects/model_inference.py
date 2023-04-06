@@ -35,10 +35,11 @@ class InputNet(tf.keras.Model):
         
         xyz = xyz - tf.math.reduce_mean(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True)
         xyz = xyz / tf.math.reduce_std(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True)
+        
         # K = xyz.shape[-1]
         # ref = tf.gather(xyz, self.NORM_REF, axis=1)
         # xyz_flat = tf.reshape(ref, (-1, K))
-        # m = tf.math.reduce_mean(xyz_flat, axis=0, keepdims=True)
+        # m = tf.reshape(tf.math.reduce_mean(xyz_flat, axis=0, keepdims=True), (1,1,K))
         # s = tf.math.reduce_mean(tf.math.reduce_std(xyz_flat, axis=0))
         # xyz = xyz - m
         # xyz = xyz / s
