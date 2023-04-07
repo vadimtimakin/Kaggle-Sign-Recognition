@@ -30,19 +30,11 @@ class InputNet(tf.keras.Model):
         ))
 
     def call(self, xyz):
-        xyz = xyz[:60]
+        xyz = xyz[:60]   # ???????????????
         xyz = xyz[:, :, :2]
         
         xyz = xyz - tf.math.reduce_mean(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True)
         xyz = xyz / tf.math.reduce_std(tf.boolean_mask(xyz, ~tf.math.is_nan(xyz)), axis=0, keepdims=True)
-        
-        # K = xyz.shape[-1]
-        # ref = tf.gather(xyz, self.NORM_REF, axis=1)
-        # xyz_flat = tf.reshape(ref, (-1, K))
-        # m = tf.reshape(tf.math.reduce_mean(xyz_flat, axis=0, keepdims=True), (1,1,K))
-        # s = tf.math.reduce_mean(tf.math.reduce_std(xyz_flat, axis=0))
-        # xyz = xyz - m
-        # xyz = xyz / s
 
         lhand = tf.gather(xyz, self.LHAND, axis=1)
         rhand = tf.gather(xyz, self.RHAND, axis=1)
@@ -177,15 +169,13 @@ class SingleNet(nn.Module):
 
         self.cls_embed = nn.Parameter(torch.zeros((1, self.embed_dim), device='cuda'))
         self.x_embed = nn.Sequential(
-            nn.Linear(num_point * 2, embed_dim * 3),
-            nn.LayerNorm(embed_dim * 3),
-            nn.Hardswish(),
-            nn.Dropout(0.4),
-            nn.Linear(embed_dim * 3, embed_dim * 2),
+            nn.Linear(num_point * 2, embed_dim * 2),
             nn.LayerNorm(embed_dim * 2),
             nn.Hardswish(),
             nn.Dropout(0.4),
             nn.Linear(embed_dim * 2, embed_dim),
+            nn.LayerNorm(embed_dim),
+            nn.Hardswish(),
         )
 
         self.encoder = nn.ModuleList([

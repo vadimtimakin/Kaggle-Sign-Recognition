@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'model_update',
+        'experiment_name': 'supermodel',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -13,7 +13,7 @@ config = {
         'path_to_json': '/home/toefl/K/asl-signs/sign_to_prediction_index_map.json',
         'path_to_folder': '/home/toefl/K/asl-signs/',
         'pq_path': '/home/toefl/K/asl-signs/train_landmark_files/53618/1001379621.parquet',
-        'path_to_checkpoints': './checkpoints/${general.experiment_name}',
+        'path_to_checkpoints': './checkpoints/${general.experiment_name}', 
     },
     'training': {
         'num_epochs': 100,
@@ -51,15 +51,15 @@ config = {
     'split': {
         'n_splits': 5,
         'folds_to_train': [2, 3, 4, 0, 1],
-        'folds_to_submit': [2, 3, 4],
+        'folds_to_submit': [2, 3, 4, 0],
         'already_split': False,
     },
     'model': {           
         'freeze_batchnorms': False,
-        'converter_sample_input_shape': [60, 543, 3],
-        'model_sample_input_shape': [60, 102, 2],
+        'converter_sample_input_shape': [100, 543, 3],
+        'model_sample_input_shape': [100, 102, 2],
         'params': {
-            "max_length": 60,
+            "max_length": 100,
             "embed_dim": 512, 
             "num_point": 102,
             "num_head": 16,

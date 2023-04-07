@@ -4,6 +4,7 @@ import random
 import pickle
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from torch.utils.data import Dataset
 from sklearn.model_selection import StratifiedGroupKFold
 
@@ -60,6 +61,10 @@ class ISLDataset(Dataset):
         self.is_train = is_train
         self.config = config
         self.norm_ref = [500, 501, 512, 513, 159,  386, 13]
+        self.fixed_frames = self.config.model.params.max_length
+        self.dim = 2
+        self.lh_idx_range = (468, 489)
+        self.rh_idx_range = (522, 543)
 
     def __len__(self):
         return len(self.df)
@@ -72,13 +77,6 @@ class ISLDataset(Dataset):
         return data.astype(np.float32)
 
     def normalise(self, xyz):
-        # K = xyz.shape[-1]
-        # ref = xyz[:, self.norm_ref]
-        # xyz_flat = ref.reshape(-1,K)
-        # m = np.nanmean(xyz_flat,0).reshape(1,1,K)
-        # s = np.nanstd(xyz_flat, 0).mean() 
-        # xyz = xyz - m
-        # xyz = xyz / s
         xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True)
         xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
         return xyz
@@ -110,6 +108,62 @@ class ISLDataset(Dataset):
         xyz[torch.isnan(xyz)] = 0
         xyz = xyz[:self.config.model.params.max_length]
         return xyz
+    
+    def prepare_frames(self, tensor):
+        nan_frames = []
+        for t in range(tensor.shape[0]):
+            if np.all(np.isnan(tensor[t, self.lh_idx_range[0]:self.lh_idx_range[1], :])) and \
+            np.all(np.isnan(tensor[t, self.rh_idx_range[0]:self.rh_idx_range[1], :])):
+                nan_frames.append(t)
+
+        if len(nan_frames)!=0:
+            nan_mask = np.zeros((tensor.shape[0],), dtype=bool)
+            nan_mask[nan_frames] = True
+            new_tensor = tensor[~nan_mask]
+        else:
+            new_tensor = tensor
+
+        tensor_frames = new_tensor.shape[0]
+
+        if tensor_frames > self.fixed_frames:
+            interval = np.linspace(0, tensor_frames-1, self.fixed_frames, dtype=int)
+            new_tensor = np.array([new_tensor[i] for i in interval])
+        else: 
+            repetition = self.fixed_frames-tensor_frames
+            for rep in range(repetition):
+                new_tensor = np.concatenate([new_tensor, np.expand_dims(new_tensor[-1], axis=0)], axis=0)
+
+        max_non_zero = self.fixed_frames*21*self.dim
+        new_tensor = new_tensor.reshape((self.fixed_frames, self.dim*543))
+        tensor = tensor.reshape((tensor.shape[0], self.dim*543))
+        filled_tensor = np.where(np.isnan(new_tensor), np.zeros_like(new_tensor), new_tensor)
+
+        right_hand_tensor = filled_tensor[:, self.rh_idx_range[0]*self.dim :self.rh_idx_range[1]*self.dim ]
+        left_hand_tensor = filled_tensor[:, self.lh_idx_range[0]*self.dim :self.lh_idx_range[1]*self.dim ]
+        count_right_nonzero = np.sum(np.count_nonzero(right_hand_tensor, axis=1))
+        count_left_nonzero = np.sum(np.count_nonzero(left_hand_tensor, axis=1))
+
+        if count_right_nonzero not in [max_non_zero, 0] or count_left_nonzero not in [max_non_zero, 0]:
+            main_hand_tensor, start, end = (right_hand_tensor, self.rh_idx_range[0]*self.dim , self.rh_idx_range[1]*self.dim ) \
+                                    if count_right_nonzero > count_left_nonzero \
+                                    else (left_hand_tensor, self.lh_idx_range[0]*self.dim , self.lh_idx_range[1]*self.dim )
+            all_indices = list(np.count_nonzero(main_hand_tensor, axis=1))
+            zero_indices = [i for i, x in enumerate(all_indices) if x == 0]
+            mean_frame = np.mean(np.where(np.isnan(tensor), np.zeros_like(tensor), tensor), axis=0, keepdims=True)[:, start:end]
+            mean_tensor = None
+            for frame_n in range(self.fixed_frames):
+                if frame_n in zero_indices:
+                    mean_tensor = np.concatenate([mean_tensor, mean_frame], axis=0) if frame_n != 0 else mean_frame
+                else: 
+                    main_tensor = np.expand_dims(main_hand_tensor[frame_n, :], axis=0)
+                    mean_tensor = np.concatenate([mean_tensor, main_tensor], axis=0) if frame_n != 0 else main_tensor
+            zero_tensor = np.zeros((self.fixed_frames,21*self.dim))
+            new_right_tensor, new_left_tensor = (mean_tensor, zero_tensor) \
+                                                if count_right_nonzero > count_left_nonzero \
+                                                else (zero_tensor, mean_tensor)
+            filled_tensor = np.concatenate([filled_tensor[:, :468*self.dim], new_left_tensor, filled_tensor[:, 489*self.dim:522*self.dim], new_right_tensor], -1)
+
+        return filled_tensor
             
     def augment(
         self,
@@ -149,10 +203,9 @@ class ISLDataset(Dataset):
         pq_file = f'{self.config.paths.path_to_folder}{sample.path}'
         xyz = self.load_relevant_data_subset(pq_file)
 
-        xyz = xyz[:60]
-        xyz = xyz[:, :, :2]
-
+        xyz = self.prepare_frames(xyz)
         xyz = torch.from_numpy(xyz).float()
+        xyz = xyz.reshape((self.fixed_frames, 543, 2))
         xyz = self.normalise(xyz)
         xyz = self.preprocess(xyz)
 
