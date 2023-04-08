@@ -105,6 +105,18 @@ class ISLDataset(Dataset):
         slip[...,0] *= -1
         slip = slip[:,[10,9,8,7,6,5,4,3,2,1,0]+[19,18,17,16,15,14,13,12,11]]
         return slip
+    
+    def get_hand_angles(self, keypoints):
+        vec1 = keypoints[:, :-2] - keypoints[:, 1:-1]
+        vec2 = keypoints[:, 2:] - keypoints[:, 1:-1]
+
+        norm1 = np.linalg.norm(vec1, axis=-1)
+        norm2 = np.linalg.norm(vec2, axis=-1)
+
+        dot_product = np.nansum(vec1 * vec2, axis=-1)
+        cos_angles = dot_product / (norm1 * norm2)
+        angles = np.arccos(np.clip(cos_angles, -1.0, 1.0))
+        return torch.from_numpy(angles).float()
 
     def preprocess(self, xyz, L):
         if self.is_train:
@@ -129,6 +141,9 @@ class ISLDataset(Dataset):
                 spose = self.do_hflip_spose(spose)
                 leye, reye = self.do_hflip_eye(leye, reye)
                 slip = self.do_hflip_slip(slip)
+
+        left_angle_tensor = self.get_hand_angles(lhand)
+        right_angle_tensor = self.get_hand_angles(rhand)
 
         lhand2 = lhand[:, :21, :2]
         ld = lhand2.reshape(-1, 21, 1, 2) - lhand2.reshape(-1, 1, 21, 2)
@@ -157,6 +172,8 @@ class ISLDataset(Dataset):
             dxyz.reshape(L,-1),
             rd.reshape(L,-1),
             ld.reshape(L,-1),
+            left_angle_tensor,
+            right_angle_tensor,
         ], -1)
 
         xyz[torch.isnan(xyz)] = 0
