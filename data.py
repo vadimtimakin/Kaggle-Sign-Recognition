@@ -1,56 +1,13 @@
 import json
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import random
 import pickle
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 from torch.utils.data import Dataset
 from sklearn.model_selection import StratifiedGroupKFold
-
-LHAND = np.arange(468, 489).tolist()
-RHAND = np.arange(522, 543).tolist() 
-REYE = [
-    33, 7, 163, 144, 145, 153, 154, 155, 133,
-    246, 161, 160, 159, 158, 157, 173,
-]
-LEYE = [
-    263, 249, 390, 373, 374, 380, 381, 382, 362,
-    466, 388, 387, 386, 385, 384, 398,
-]
-SLIP = [
-    78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
-    191, 80, 81, 82, 13, 312, 311, 310, 415,
-]
-SPOSE = (np.array([
-    11,13,15,12,14,16,23,24,
-])+489).tolist()
-
-
-def do_hflip_hand(lhand, rhand):
-    rhand[...,0] *= -1
-    lhand[...,0] *= -1
-    rhand, lhand = lhand, rhand
-    return lhand, rhand
-
-
-def do_hflip_eye(leye, reye):
-    reye[...,0] *= -1
-    leye[...,0] *= -1
-    reye, leye = leye, reye
-    return leye, reye
-
-
-def do_hflip_spose(spose):
-    spose[...,0] *= -1
-    spose = spose[:,[3,4,5,0,1,2,7,6]]
-    return spose
-
-
-def do_hflip_slip(slip):
-    slip[...,0] *= -1
-    slip = slip[:,[10,9,8,7,6,5,4,3,2,1,0]+[19,18,17,16,15,14,13,12,11]]
-    return slip
 
 
 class ISLDataset(Dataset):
@@ -60,11 +17,44 @@ class ISLDataset(Dataset):
         self.df = df
         self.is_train = is_train
         self.config = config
-        self.norm_ref = [500, 501, 512, 513, 159,  386, 13]
-        self.fixed_frames = self.config.model.params.max_length
-        self.dim = 2
-        self.lh_idx_range = (468, 489)
-        self.rh_idx_range = (522, 543)
+        self.LHAND = np.arange(468, 489).tolist()
+        self.RHAND = np.arange(522, 543).tolist() 
+        self.REYE = [
+            33, 7, 163, 144, 145, 153, 154, 155, 133,
+            246, 161, 160, 159, 158, 157, 173,
+        ]
+        self.LEYE = [
+            263, 249, 390, 373, 374, 380, 381, 382, 362,
+            466, 388, 387, 386, 385, 384, 398,
+        ]
+        self.SLIP = [
+            78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
+            191, 80, 81, 82, 13, 312, 311, 310, 415,
+        ]
+        self.SPOSE = (np.array([11,13,15,12,14,16,23,24,])+489).tolist()
+        self.TRIU = [
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+			14, 15, 16, 17, 18, 19, 20, 23, 24, 25, 26, 27, 28,
+			29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
+			45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
+			58, 59, 60, 61, 62, 67, 68, 69, 70, 71, 72, 73, 74,
+			75, 76, 77, 78, 79, 80, 81, 82, 83, 89, 90, 91, 92,
+			93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 111,
+			112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124,
+			125, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144,
+			145, 146, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165,
+			166, 167, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187,
+			188, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 221,
+			222, 223, 224, 225, 226, 227, 228, 229, 230, 243, 244, 245, 246,
+			247, 248, 249, 250, 251, 265, 266, 267, 268, 269, 270, 271, 272,
+			287, 288, 289, 290, 291, 292, 293, 309, 310, 311, 312, 313, 314,
+			331, 332, 333, 334, 335, 353, 354, 355, 356, 375, 376, 377, 397,
+			398, 419,
+		]
+
+        offset = (np.arange(1000) - self.config.model.params.max_length) // 2
+        offset = np.clip(offset,0, 1000).tolist()
+        self.offset = nn.Parameter(torch.LongTensor(offset),requires_grad=False)
 
     def __len__(self):
         return len(self.df)
@@ -77,24 +67,80 @@ class ISLDataset(Dataset):
         return data.astype(np.float32)
 
     def normalise(self, xyz):
-        xyz = xyz - xyz[~torch.isnan(xyz)].mean(0,keepdim=True)
-        xyz = xyz / xyz[~torch.isnan(xyz)].std(0, keepdim=True)
-        return xyz
+        xyz = xyz[:, :, :2]
 
-    def preprocess(self, xyz):
-        lhand = xyz[:,LHAND]
-        rhand = xyz[:,RHAND]
-        spose = xyz[:,SPOSE]
-        leye = xyz[:,LEYE]
-        reye = xyz[:,REYE]
-        slip = xyz[:,SLIP]
+        L = len(xyz)
+        if L > self.config.model.params.max_length:
+            i = self.offset[L]
+            xyz = xyz[i:i+self.config.model.params.max_length]
+
+        L = len(xyz)
+        not_nan_xyz = xyz[~torch.isnan(xyz)]
+        if len(not_nan_xyz) != 0:
+            not_nan_xyz_mean = not_nan_xyz.mean(0, keepdim=True)
+            not_nan_xyz_std  = not_nan_xyz.std(0, keepdim=True)
+            xyz -= not_nan_xyz_mean
+            xyz /= not_nan_xyz_std
+
+        return xyz, L
+    
+    def do_hflip_hand(self, lhand, rhand):
+        rhand[...,0] *= -1
+        lhand[...,0] *= -1
+        rhand, lhand = lhand, rhand
+        return lhand, rhand
+
+    def do_hflip_eye(self, leye, reye):
+        reye[...,0] *= -1
+        leye[...,0] *= -1
+        reye, leye = leye, reye
+        return leye, reye
+
+    def do_hflip_spose(self, spose):
+        spose[...,0] *= -1
+        spose = spose[:,[3,4,5,0,1,2,7,6]]
+        return spose
+
+    def do_hflip_slip(self, slip):
+        slip[...,0] *= -1
+        slip = slip[:,[10,9,8,7,6,5,4,3,2,1,0]+[19,18,17,16,15,14,13,12,11]]
+        return slip
+
+    def preprocess(self, xyz, L):
+        if self.is_train:
+            xyz = self.augment(
+                xyz=xyz,
+                scale=self.config.augmentations.scale,
+                shift=self.config.augmentations.shift,
+                degree=self.config.augmentations.degree,
+                p=self.config.augmentations.p,
+            )
+
+        lhand = xyz[:,self.LHAND]
+        rhand = xyz[:,self.RHAND]
+        spose = xyz[:,self.SPOSE]
+        leye = xyz[:,self.LEYE]
+        reye = xyz[:,self.REYE]
+        slip = xyz[:,self.SLIP]
 
         if self.is_train:
             if random.random() < 0.5:
-                lhand, rhand = do_hflip_hand(lhand, rhand)
-                spose = do_hflip_spose(spose)
-                leye, reye = do_hflip_eye(leye, reye)
-                slip = do_hflip_slip(slip)
+                lhand, rhand = self.do_hflip_hand(lhand, rhand)
+                spose = self.do_hflip_spose(spose)
+                leye, reye = self.do_hflip_eye(leye, reye)
+                slip = self.do_hflip_slip(slip)
+
+        lhand2 = lhand[:, :21, :2]
+        ld = lhand2.reshape(-1, 21, 1, 2) - lhand2.reshape(-1, 1, 21, 2)
+        ld = np.sqrt((ld ** 2).sum(-1))
+        ld = ld.reshape(L, -1)
+        ld = ld[:,self.TRIU]
+
+        rhand2 = rhand[:, :21, :2]
+        rd = rhand2.reshape(-1, 21, 1, 2) - rhand2.reshape(-1, 1, 21, 2)
+        rd = np.sqrt((rd ** 2).sum(-1))
+        rd = rd.reshape(L, -1)
+        rd = rd[:,self.TRIU]
 
         xyz = torch.cat([
             lhand,
@@ -103,67 +149,18 @@ class ISLDataset(Dataset):
             leye,
             reye,
             slip,
-        ],1)
+        ], 1).contiguous()
+        dxyz = F.pad(xyz[:-1] - xyz[1:], [0, 0, 0, 0, 0, 1])
+
+        xyz = torch.cat([
+            xyz.reshape(L,-1),
+            dxyz.reshape(L,-1),
+            rd.reshape(L,-1),
+            ld.reshape(L,-1),
+        ], -1)
 
         xyz[torch.isnan(xyz)] = 0
-        xyz = xyz[:self.config.model.params.max_length]
         return xyz
-    
-    def prepare_frames(self, tensor):
-        nan_frames = []
-        for t in range(tensor.shape[0]):
-            if np.all(np.isnan(tensor[t, self.lh_idx_range[0]:self.lh_idx_range[1], :])) and \
-            np.all(np.isnan(tensor[t, self.rh_idx_range[0]:self.rh_idx_range[1], :])):
-                nan_frames.append(t)
-
-        if len(nan_frames)!=0:
-            nan_mask = np.zeros((tensor.shape[0],), dtype=bool)
-            nan_mask[nan_frames] = True
-            new_tensor = tensor[~nan_mask]
-        else:
-            new_tensor = tensor
-
-        tensor_frames = new_tensor.shape[0]
-
-        if tensor_frames > self.fixed_frames:
-            interval = np.linspace(0, tensor_frames-1, self.fixed_frames, dtype=int)
-            new_tensor = np.array([new_tensor[i] for i in interval])
-        else: 
-            repetition = self.fixed_frames-tensor_frames
-            for rep in range(repetition):
-                new_tensor = np.concatenate([new_tensor, np.expand_dims(new_tensor[-1], axis=0)], axis=0)
-
-        max_non_zero = self.fixed_frames*21*self.dim
-        new_tensor = new_tensor.reshape((self.fixed_frames, self.dim*543))
-        tensor = tensor.reshape((tensor.shape[0], self.dim*543))
-        filled_tensor = np.where(np.isnan(new_tensor), np.zeros_like(new_tensor), new_tensor)
-
-        right_hand_tensor = filled_tensor[:, self.rh_idx_range[0]*self.dim :self.rh_idx_range[1]*self.dim ]
-        left_hand_tensor = filled_tensor[:, self.lh_idx_range[0]*self.dim :self.lh_idx_range[1]*self.dim ]
-        count_right_nonzero = np.sum(np.count_nonzero(right_hand_tensor, axis=1))
-        count_left_nonzero = np.sum(np.count_nonzero(left_hand_tensor, axis=1))
-
-        if count_right_nonzero not in [max_non_zero, 0] or count_left_nonzero not in [max_non_zero, 0]:
-            main_hand_tensor, start, end = (right_hand_tensor, self.rh_idx_range[0]*self.dim , self.rh_idx_range[1]*self.dim ) \
-                                    if count_right_nonzero > count_left_nonzero \
-                                    else (left_hand_tensor, self.lh_idx_range[0]*self.dim , self.lh_idx_range[1]*self.dim )
-            all_indices = list(np.count_nonzero(main_hand_tensor, axis=1))
-            zero_indices = [i for i, x in enumerate(all_indices) if x == 0]
-            mean_frame = np.mean(np.where(np.isnan(tensor), np.zeros_like(tensor), tensor), axis=0, keepdims=True)[:, start:end]
-            mean_tensor = None
-            for frame_n in range(self.fixed_frames):
-                if frame_n in zero_indices:
-                    mean_tensor = np.concatenate([mean_tensor, mean_frame], axis=0) if frame_n != 0 else mean_frame
-                else: 
-                    main_tensor = np.expand_dims(main_hand_tensor[frame_n, :], axis=0)
-                    mean_tensor = np.concatenate([mean_tensor, main_tensor], axis=0) if frame_n != 0 else main_tensor
-            zero_tensor = np.zeros((self.fixed_frames,21*self.dim))
-            new_right_tensor, new_left_tensor = (mean_tensor, zero_tensor) \
-                                                if count_right_nonzero > count_left_nonzero \
-                                                else (zero_tensor, mean_tensor)
-            filled_tensor = np.concatenate([filled_tensor[:, :468*self.dim], new_left_tensor, filled_tensor[:, 489*self.dim:522*self.dim], new_right_tensor], -1)
-
-        return filled_tensor
             
     def augment(
         self,
@@ -203,20 +200,9 @@ class ISLDataset(Dataset):
         pq_file = f'{self.config.paths.path_to_folder}{sample.path}'
         xyz = self.load_relevant_data_subset(pq_file)
 
-        xyz = self.prepare_frames(xyz)
         xyz = torch.from_numpy(xyz).float()
-        xyz = xyz.reshape((self.fixed_frames, 543, 2))
-        xyz = self.normalise(xyz)
-        xyz = self.preprocess(xyz)
-
-        if self.is_train:
-            xyz = self.augment(
-                xyz=xyz,
-                scale=self.config.augmentations.scale,
-                shift=self.config.augmentations.shift,
-                degree=self.config.augmentations.degree,
-                p=self.config.augmentations.p,
-            )
+        xyz, L = self.normalise(xyz)
+        xyz = self.preprocess(xyz, L)
 
         return {
             "features": xyz,
@@ -250,8 +236,6 @@ def get_fold_samples(config, current_fold):
     df = pd.read_csv(config.paths.path_to_csv)
     label_map = json.load(open(config.paths.path_to_json, "r"))
     df['label'] = df['sign'].map(label_map)
-
-    # df = df[df["participant_id"] != 29302]
 
     if config.paths.path_to_data.endswith('npy'):
         data = np.load(config.paths.path_to_data)

@@ -51,17 +51,17 @@ config = {
     'split': {
         'n_splits': 5,
         'folds_to_train': [2, 3, 4, 0, 1],
-        'folds_to_submit': [2, 3, 4, 0],
+        'folds_to_submit': [2, 3, 4],
         'already_split': False,
     },
     'model': {           
         'freeze_batchnorms': False,
         'converter_sample_input_shape': [100, 543, 3],
-        'model_sample_input_shape': [100, 102, 2],
+        'model_sample_input_shape': [100, 828],
         'params': {
             "max_length": 100,
             "embed_dim": 512, 
-            "num_point": 102,
+            "num_point": 828,
             "num_head": 16,
             "num_class": '${general.num_classes}',
             "num_block": 1, 

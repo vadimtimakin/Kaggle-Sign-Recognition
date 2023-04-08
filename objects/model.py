@@ -3,7 +3,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import Parameter
 
 
 class ArcMarginProduct_subcenter(nn.Module):
@@ -96,20 +95,19 @@ def positional_encoding(length, embed_dim):
 def pack_seq(
     seq, max_length,
 ):
-    # seq = [s.reshape(s.shape[0], s.shape[1] // 2, 2) for s in seq]
     length = [min(len(s), max_length)  for s in seq]
     batch_size = len(seq)
     K = seq[0].shape[1]
     L = max(length)
 
-    x = torch.zeros((batch_size, L, K, 2)).to(seq[0].device)
+    x = torch.zeros((batch_size, L, K)).to(seq[0].device)
     x_mask = torch.zeros((batch_size, L)).to(seq[0].device)
     for b in range(batch_size):
         l = length[b]
         x[b, :l] = seq[b][:l]
         x_mask[b, l:] = 1
     x_mask = (x_mask>0.5)
-    x = x.reshape(batch_size,-1,K*2)
+    x = x.reshape(batch_size,-1,K)
     return x, x_mask
 
 
@@ -127,7 +125,7 @@ class BasedPartyNet(nn.Module):
 
         self.cls_embed = nn.Parameter(torch.zeros((1, embed_dim)))
         self.x_embed = nn.Sequential(
-            nn.Linear(num_point * 2, embed_dim * 2),
+            nn.Linear(num_point, embed_dim * 2),
             nn.LayerNorm(embed_dim * 2),
             nn.Hardswish(),
             nn.Dropout(0.4),

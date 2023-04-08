@@ -57,3 +57,5 @@ augmentations | 0.6353 | 25314 s
 augs_plus_plus | 0.6369 | 31865 s
 
 reduce_embed | 0.6419 | 33555 s
+
+supermodel | 0.6832 | 37889 s

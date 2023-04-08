@@ -112,6 +112,7 @@ tf.saved_model.save(
 
 converter = tf.lite.TFLiteConverter.from_saved_model(tf_infer_model_path)
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
+converter.target_spec.supported_types = [tf.float16]
 tflite_model = converter.convert()
 
 # Save and test the model
