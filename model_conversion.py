@@ -81,6 +81,7 @@ class ASLInferModel(tf.Module):
 
     def __init__(self):
         super(ASLInferModel, self).__init__()
+        self.weights = config.split.weights
         self.feature_gen = feature_converter
         self.models = [tf.saved_model.load(tf_model_path.replace('N', str(f))) for f in config.split.folds_to_submit]
         self.feature_gen.trainable = False
@@ -90,17 +91,17 @@ class ASLInferModel(tf.Module):
         input_signature=[
             tf.TensorSpec(shape=[None, 543, 3], dtype=tf.float32, name="inputs")
         ]
-    )
+    ) 
     def call(self, inputs):
         output_tensors = {}
         start = time.time()
         features = self.feature_gen(tf.cast(inputs, dtype=tf.float32))
         start = time.time()
-        output_tensors["outputs"] = tf.reduce_mean([self.models[f](
+        output_tensors["outputs"] = tf.reduce_sum([self.models[f](
             **{"inputs": features}
-        )["outputs"][0, :] for f in range(len(config.split.folds_to_submit))], axis=0)
+        )["outputs"][0, :] * self.weights[f] for f in range(len(config.split.folds_to_submit))], axis=0)
         return output_tensors
-
+        
 # Convert the model
 
 mytfmodel = ASLInferModel()

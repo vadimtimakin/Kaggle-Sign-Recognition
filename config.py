@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'max_len_256',
+        'experiment_name': 'sam',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -52,14 +52,15 @@ config = {
         'n_splits': 5,
         'folds_to_train': [2, 3, 4, 0, 1],
         'folds_to_submit': [2, 3, 4, 0, 1],
+        'weights': [0.25, 0.1, 0.25, 0.25, 0.15],
         'already_split': False,
     },
     'model': {           
         'freeze_batchnorms': False,
-        'converter_sample_input_shape': [256, 543, 3],
-        'model_sample_input_shape': [256, 828],
+        'converter_sample_input_shape': [100, 543, 3],
+        'model_sample_input_shape': [100, 828],
         'params': {
-            "max_length": 256,
+            "max_length": 100,
             "embed_dim": 512, 
             "num_point": 828,
             "num_head": 16,
