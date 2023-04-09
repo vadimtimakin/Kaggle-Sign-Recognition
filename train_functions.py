@@ -87,10 +87,11 @@ def train(config, model, train_loader, optimizer, scheduler, loss_function, epoc
             scheduler.step()
         else:
             if config.scheduler.interval == 'epoch':
-                scheduler.step()
+                scheduler.step()    
     else:
         if config.scheduler.interval == 'epoch':
             scheduler.step()
+
     if config.logging.prints:
         print('Learning rate:', optimizer.param_groups[0]['lr'])
 
@@ -142,7 +143,7 @@ def run(config, fold):
     # Empty cache
     torch.cuda.empty_cache()
 
-    # Get dataloaders
+    # Get data loaders
     train_loader, val_loader = get_loaders(config, fold)
 
     # Get objects

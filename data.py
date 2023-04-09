@@ -17,6 +17,11 @@ class ISLDataset(Dataset):
         self.df = df
         self.is_train = is_train
         self.config = config
+
+        offset = (np.arange(1000) - self.config.model.params.max_length) // 2
+        offset = np.clip(offset,0, 1000).tolist()
+        self.offset = nn.Parameter(torch.LongTensor(offset),requires_grad=False)
+
         self.LHAND = np.arange(468, 489).tolist()
         self.RHAND = np.arange(522, 543).tolist() 
         self.REYE = [
@@ -51,10 +56,6 @@ class ISLDataset(Dataset):
 			331, 332, 333, 334, 335, 353, 354, 355, 356, 375, 376, 377, 397,
 			398, 419,
 		]
-
-        offset = (np.arange(1000) - self.config.model.params.max_length) // 2
-        offset = np.clip(offset,0, 1000).tolist()
-        self.offset = nn.Parameter(torch.LongTensor(offset),requires_grad=False)
 
     def __len__(self):
         return len(self.df)
@@ -129,6 +130,8 @@ class ISLDataset(Dataset):
                 spose = self.do_hflip_spose(spose)
                 leye, reye = self.do_hflip_eye(leye, reye)
                 slip = self.do_hflip_slip(slip)
+
+        # print(torch.isnan(lhand).sum().item(), torch.isnan(rhand).sum().item())
 
         lhand2 = lhand[:, :21, :2]
         ld = lhand2.reshape(-1, 21, 1, 2) - lhand2.reshape(-1, 1, 21, 2)
@@ -286,10 +289,10 @@ def get_fold_samples(config, current_fold):
         train_idx = random.sample([*range(len(train_data))], config.training.number_of_train_debug_samples)
         val_idx = random.sample([*range(len(val_data))], config.training.number_of_val_debug_samples)
 
-        train_data = train_data[train_idx]
-        train_targets = train_targets[train_idx]
-        val_data = val_data[val_idx]
-        val_targets = val_targets[val_idx]
+        train_data = [data[i] for i in train_idx]
+        train_targets = [labels[i] for i in train_idx]
+        val_data = [data[i] for i in val_idx]
+        val_targets = [labels[i] for i in val_idx]
 
     return train_data, train_targets, train_df, val_data, val_targets, val_df
 

@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'sam',
+        'experiment_name': 'different_hands_handling',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -52,7 +52,7 @@ config = {
         'n_splits': 5,
         'folds_to_train': [2, 3, 4, 0, 1],
         'folds_to_submit': [2, 3, 4, 0, 1],
-        'weights': [0.25, 0.1, 0.25, 0.25, 0.15],
+        'weights': [0.2, 0.2, 0.2, 0.2, 0.2],
         'already_split': False,
     },
     'model': {           
