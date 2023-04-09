@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'different_hands_handling',
+        'experiment_name': 'supermodel',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -49,10 +49,11 @@ config = {
         'drop_last': True,
     },
     'split': {
+        'all_data_train': True,
         'n_splits': 5,
-        'folds_to_train': [2, 3, 4, 0, 1],
-        'folds_to_submit': [2, 3, 4, 0, 1],
-        'weights': [0.2, 0.2, 0.2, 0.2, 0.2],
+        'folds_to_train': [5],
+        'folds_to_submit': [2, 3, 4, 0, 1, 5],
+        'weights': [1/6] * 6,
         'already_split': False,
     },
     'model': {           

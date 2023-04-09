@@ -131,8 +131,6 @@ class ISLDataset(Dataset):
                 leye, reye = self.do_hflip_eye(leye, reye)
                 slip = self.do_hflip_slip(slip)
 
-        # print(torch.isnan(lhand).sum().item(), torch.isnan(rhand).sum().item())
-
         lhand2 = lhand[:, :21, :2]
         ld = lhand2.reshape(-1, 21, 1, 2) - lhand2.reshape(-1, 1, 21, 2)
         ld = np.sqrt((ld ** 2).sum(-1))
@@ -276,8 +274,12 @@ def get_fold_samples(config, current_fold):
                     val_data = data[val_index]
                     val_targets = labels[val_index]
                 else:
-                    train_data = [data[i] for i in train_index]
-                    train_targets = [labels[i] for i in train_index]
+                    if config.split.all_data_train:
+                        train_data = data
+                        train_targets = labels
+                    else:
+                        train_data = [data[i] for i in train_index]
+                        train_targets = [labels[i] for i in train_index]
                     val_data = [data[i] for i in val_index]
                     val_targets = [labels[i] for i in val_index]
                 train_df = df.iloc[train_index]

@@ -207,8 +207,12 @@ def run(config, fold):
 
         # Train and validation steps
         train_loss = train(config, model, train_loader, optimizer, scheduler, loss_function, epoch, scaler)
-        val_loss, predictions, targets = validation(config, model, val_loader, loss_function)
-        current_metric = get_metric(config, targets, predictions)
+        if config.split.all_data_train:
+            val_loss, predictions, targets = 0, 1, 0
+            current_metric = epoch + 1
+        else:
+            val_loss, predictions, targets = validation(config, model, val_loader, loss_function)
+            current_metric = get_metric(config, targets, predictions)
 
         # Save the metrics
         train_losses.append(train_loss)

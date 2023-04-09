@@ -215,6 +215,7 @@ class SingleNet(nn.Module):
         self.pos_embed = nn.Parameter(positional_encoding(max_length, self.embed_dim))
 
         self.cls_embed = nn.Parameter(torch.zeros((1, self.embed_dim), device='cuda'))
+        
         self.x_embed = nn.Sequential(
             nn.Linear(num_point, embed_dim * 2),
             nn.LayerNorm(embed_dim * 2),

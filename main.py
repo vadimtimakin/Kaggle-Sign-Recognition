@@ -49,12 +49,17 @@ if __name__ == '__main__':
     start_time = time.time()
 
     for fold in config.split.folds_to_train:
+        if config.split.all_data_train:
+            config.split.folds_to_train = [config.split.n_splits]
+            config.split.n_splits += 1
+            
         print(f'\nFold: {fold}')
         config.paths.path_to_checkpoints = os.path.join(src_path, f'fold_{fold}')
         cur_score, predictions, targets = run(config, fold)
 
-        np.save(os.path.join(f'{src_path}/oof/preds_{fold}.npy'), predictions)
-        np.save(os.path.join(f'{src_path}/oof/labels_{fold}.npy'), targets)
+        if not config.split.all_data_train:
+            np.save(os.path.join(f'{src_path}/oof/preds_{fold}.npy'), predictions)
+            np.save(os.path.join(f'{src_path}/oof/labels_{fold}.npy'), targets)
 
         final_score += cur_score / n_folds
         scores.append(cur_score)
@@ -62,21 +67,25 @@ if __name__ == '__main__':
         if config.logging.telegram:
             logger.info(f'Fold: {fold} | Score: {round(cur_score, 4)}')
 
-    print()
-    for fold in range(len(config.split.folds_to_train)):
-        print(f'Fold: {fold} | Score: {round(scores[fold], 4)}')
+        if config.split.all_data_train:
+            break
+
+    if not config.split.all_data_train:
+        print()
+        for fold in range(len(config.split.folds_to_train)):
+            print(f'Fold: {fold} | Score: {round(scores[fold], 4)}')
+            if config.logging.telegram:
+                logger.info(f'Fold: {fold} | Score: {round(scores[fold], 4)}')
+
+        cv = round(sum(scores) / len(scores), 4)
+        t = int(time.time() - start_time)
+
+        print('\nThe training has been finished!')
+        print(f'CV: {cv}')
+        print(f'Total Time: {t} s')
+
+        with open('results.txt', 'a') as file:
+            file.write(f'\n{config.general.experiment_name} | {cv} | {t} s\n')
+
         if config.logging.telegram:
-            logger.info(f'Fold: {fold} | Score: {round(scores[fold], 4)}')
-
-    cv = round(sum(scores) / len(scores), 4)
-    t = int(time.time() - start_time)
-
-    print('\nThe training has been finished!')
-    print(f'CV: {cv}')
-    print(f'Total Time: {t} s')
-
-    with open('results.txt', 'a') as file:
-        file.write(f'\n{config.general.experiment_name} | {cv} | {t} s\n')
-
-    if config.logging.telegram:
-        logger.info(f'\n{config.general.experiment_name} | {cv} | {t} s\n')
+            logger.info(f'\n{config.general.experiment_name} | {cv} | {t} s\n')
