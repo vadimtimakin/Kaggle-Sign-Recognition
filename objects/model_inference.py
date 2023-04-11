@@ -83,6 +83,22 @@ class InputNet(tf.keras.layers.Layer):
         rd = tf.reshape(rd,(L, -1))
         rd = tf.gather(rd, self.TRIU, axis=1)
 
+        led = tf.reshape(leye,(-1,16,1,2))-tf.reshape(leye,(-1,1,16,2))
+        led = tf.math.sqrt(tf.reduce_sum((led ** 2),-1))
+        led = tf.reshape(led,(L, -1))
+
+        red = tf.reshape(reye,(-1,16,1,2))-tf.reshape(reye,(-1,1,16,2))
+        red = tf.math.sqrt(tf.reduce_sum((red ** 2),-1))
+        red = tf.reshape(red,(L, -1))
+
+        lid = tf.reshape(slip,(-1,20,1,2))-tf.reshape(slip,(-1,1,20,2))
+        lid = tf.math.sqrt(tf.reduce_sum((lid ** 2),-1))
+        lid = tf.reshape(lid,(L, -1))
+
+        pod = tf.reshape(spose,(-1,8,1,2))-tf.reshape(spose,(-1,1,8,2))
+        pod = tf.math.sqrt(tf.reduce_sum((pod ** 2),-1))
+        pod = tf.reshape(pod,(L, -1))
+
         xyz = tf.concat([
             lhand, rhand, spose, leye, reye, slip,
         ],axis=1)
@@ -93,6 +109,10 @@ class InputNet(tf.keras.layers.Layer):
             tf.reshape(dxyz,(L,-1)),
             tf.reshape(rd,(L,-1)),
             tf.reshape(ld,(L,-1)),
+            tf.reshape(led,(L,-1)),
+            tf.reshape(red,(L,-1)),
+            tf.reshape(lid,(L,-1)),
+            tf.reshape(pod,(L,-1)),
         ], -1)
 
         xyz = tf.where(tf.math.is_nan(xyz), tf.zeros_like(xyz), xyz)
@@ -204,8 +224,9 @@ class TransformerBlock(nn.Module):
 
 class SingleNet(nn.Module):
 
-    def __init__(self, max_length, embed_dim, num_point, num_head, num_class, num_block):
+    def __init__(self, fold, max_length, embed_dim, num_point, num_head, num_class, num_block):
         super().__init__()
+        embed_dim = 256 if fold == 5 else embed_dim
         self.num_block = num_block
         self.embed_dim = embed_dim
         self.num_head  = num_head

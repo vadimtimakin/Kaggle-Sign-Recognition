@@ -124,6 +124,7 @@ class BasedPartyNet(nn.Module):
         self.embed_dim = embed_dim
 
         self.cls_embed = nn.Parameter(torch.zeros((1, embed_dim)))
+
         self.x_embed = nn.Sequential(
             nn.Linear(num_point, embed_dim * 2),
             nn.LayerNorm(embed_dim * 2),

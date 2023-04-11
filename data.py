@@ -143,6 +143,22 @@ class ISLDataset(Dataset):
         rd = rd.reshape(L, -1)
         rd = rd[:,self.TRIU]
 
+        led = leye.reshape(-1, 16, 1, 2) - leye.reshape(-1, 1, 16, 2)
+        led = np.sqrt((led ** 2).sum(-1))
+        led = led.reshape(L, -1)
+
+        red = reye.reshape(-1, 16, 1, 2) - reye.reshape(-1, 1, 16, 2)
+        red = np.sqrt((red ** 2).sum(-1))
+        red = led.reshape(L, -1)
+
+        lid = slip.reshape(-1, 20, 1, 2) - slip.reshape(-1, 1, 20, 2)
+        lid = np.sqrt((lid ** 2).sum(-1))
+        lid = lid.reshape(L, -1)
+
+        pod = spose.reshape(-1, 8, 1, 2) - spose.reshape(-1, 1, 8, 2)
+        pod = np.sqrt((pod ** 2).sum(-1))
+        pod = pod.reshape(L, -1)
+
         xyz = torch.cat([
             lhand,
             rhand,
@@ -158,6 +174,10 @@ class ISLDataset(Dataset):
             dxyz.reshape(L,-1),
             rd.reshape(L,-1),
             ld.reshape(L,-1),
+            led.reshape(L,-1),
+            red.reshape(L,-1),
+            lid.reshape(L,-1),
+            pod.reshape(L,-1),
         ], -1)
 
         xyz[torch.isnan(xyz)] = 0

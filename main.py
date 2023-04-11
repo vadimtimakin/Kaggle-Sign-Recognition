@@ -51,6 +51,7 @@ if __name__ == '__main__':
     for fold in config.split.folds_to_train:
         if config.split.all_data_train:
             config.split.folds_to_train = [config.split.n_splits]
+            fold = config.split.n_splits
             config.split.n_splits += 1
             
         print(f'\nFold: {fold}')

@@ -35,7 +35,7 @@ feature_converter = InputNet()
 # Initialize models
 
 for fold in config.split.folds_to_submit:
-    model_infe = BasedPartyNet(**config.model.params)
+    model_infe = BasedPartyNet(fold, **config.model.params)
     model_infe.load_state_dict(
         torch.load(f"{config.paths.path_to_checkpoints}/fold_{fold}/best.pt")["model"],
     )
