@@ -17,7 +17,8 @@ import resource
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (32768, rlimit[1]))
 
-if __name__ == '__main__':
+
+def fit(config):
     set_seed(config.general.seed)
 
     if config.logging.telegram:
@@ -90,3 +91,10 @@ if __name__ == '__main__':
 
         if config.logging.telegram:
             logger.info(f'\n{config.general.experiment_name} | {cv} | {t} s\n')
+
+
+if __name__ == '__main__':
+    for i in range(1, 6):
+        config.general.seed = i
+        config.general.experiment_name = f"s{i}"
+        fit(config)
