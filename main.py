@@ -94,7 +94,7 @@ def fit(config):
 
 
 if __name__ == '__main__':
-    for i in range(1, 6):
-        config.general.seed = i
-        config.general.experiment_name = f"s{i}"
-        fit(config)
+    # for i in range(1, 6):
+    #     config.general.seed = i
+    #     config.general.experiment_name = f"s{i}"
+    fit(config)
