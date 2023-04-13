@@ -94,12 +94,10 @@ class ASLInferModel(tf.Module):
     ) 
     def call(self, inputs):
         output_tensors = {}
-        start = time.time()
         features = self.feature_gen(tf.cast(inputs, dtype=tf.float32))
-        start = time.time()
         output_tensors["outputs"] = tf.reduce_sum([self.models[f](
             **{"inputs": features}
-        )["outputs"][0, :] * self.weights[f] for f in range(len(config.split.folds_to_submit))], axis=0)
+        )["outputs"][0, :] for f in range(len(config.split.folds_to_submit))], axis=0)
         return output_tensors
         
 # Convert the model

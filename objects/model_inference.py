@@ -235,7 +235,8 @@ class SingleNet(nn.Module):
             ) for _ in range(self.num_block)
         ])
         self.logit = ArcMarginProduct_subcenter(self.embed_dim, num_class)
-        
+        self.softmax = nn.Softmax(dim=1)
+
     def forward(self, xyz):
         with torch.no_grad():
             L = xyz.shape[0]
@@ -247,4 +248,5 @@ class SingleNet(nn.Module):
             x = self.encoder[0](x)
             cls = x[[0]]
             logit = self.logit(cls)
-            return logit
+            pred = self.softmax(logit)
+            return pred
