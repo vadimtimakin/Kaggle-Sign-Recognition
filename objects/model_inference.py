@@ -206,7 +206,6 @@ class SingleNet(nn.Module):
 
     def __init__(self, fold, max_length, embed_dim, num_point, num_head, num_class, num_block):
         super().__init__()
-        embed_dim = 256 if fold == 5 else embed_dim
         self.num_block = num_block
         self.embed_dim = embed_dim
         self.num_head  = num_head
@@ -236,8 +235,7 @@ class SingleNet(nn.Module):
             ) for _ in range(self.num_block)
         ])
         self.logit = ArcMarginProduct_subcenter(self.embed_dim, num_class)
-        self.softmax = nn.Softmax(dim=1)
-
+        
     def forward(self, xyz):
         with torch.no_grad():
             L = xyz.shape[0]
@@ -249,5 +247,4 @@ class SingleNet(nn.Module):
             x = self.encoder[0](x)
             cls = x[[0]]
             logit = self.logit(cls)
-            pred = self.softmax(logit)
-            return pred
+            return logit
