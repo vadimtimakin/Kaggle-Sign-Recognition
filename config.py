@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'pooling',
+        'experiment_name': 'lowerlr',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -18,7 +18,7 @@ config = {
     'training': {
         'num_epochs': 100,
         'early_stopping_epochs': 100,
-        'lr': 1e-4 / 100,
+        'lr': 1e-5 / 100,
 
         'mixed_precision': True,
         'gradient_accumulation': False,
@@ -42,7 +42,7 @@ config = {
     },
     'dataloader_params': {
         'batch_size': 64,
-        'num_workers': 12,
+        'num_workers': 8,
         'pin_memory': False,
         'persistent_workers': True,
         'shuffle': True,
@@ -106,7 +106,7 @@ config = {
     'logging': {
         'prints': True,
         'txt_file': True,
-        'wandb': True,
+        'wandb': False,
         'telegram': True,
         'wandb_username': 'toefl',
         'wandb_project_name': 'GISLR',

@@ -356,3 +356,70 @@
 #             "features": xyz,
 #             "labels": sample.label,
 #         }
+
+# class BasedPartyNet(nn.Module):
+
+#     def __init__(self, max_length, embed_dim, num_point, num_head, num_class, num_block):
+#         super().__init__()
+
+#         pos_embed = positional_encoding(max_length, embed_dim)
+#         self.max_length = max_length
+
+#         self.pos_embed = nn.Parameter(pos_embed)
+#         self.embed_dim = embed_dim
+
+#         self.cls_embed = nn.Parameter(torch.zeros((1, embed_dim)))
+
+#         self.x_embed = nn.Sequential(
+#             nn.Linear(num_point, embed_dim * 2),
+#             nn.LayerNorm(embed_dim * 2),
+#             nn.Hardswish(),
+#             nn.Dropout(0.4),
+#             nn.Linear(embed_dim * 2, embed_dim),
+#             nn.LayerNorm(embed_dim),
+#             nn.Hardswish(),
+#         )
+
+#         self.encoder = nn.ModuleList([
+#             TransformerBlock(
+#                 embed_dim + num_point,
+#                 num_head,
+#                 embed_dim + num_point,
+#             ) for _ in range(num_block)
+#         ])
+#         self.logit = ArcMarginProduct_subcenter(self.embed_dim + num_point, num_class)
+
+#     def forward(self, inputs):
+#         xyz, x_mask = pack_seq(inputs, self.max_length)
+
+#         B,L,_ = xyz.shape
+#         x = self.x_embed(xyz)
+#         x = x + self.pos_embed[:L].unsqueeze(0)
+
+#         x = torch.cat([
+#             self.cls_embed.unsqueeze(0).repeat(B,1,1),
+#             x
+#         ],1)
+
+#         x_mask = torch.cat([
+#             torch.zeros(B,1).to(x_mask),
+#             x_mask
+#         ],1)
+
+#         xyz = torch.cat([
+#             torch.zeros(B, 1, 828).to(x_mask),
+#             xyz
+#         ],1)
+
+#         x = torch.cat([x, xyz], dim=2)
+
+#         for block in self.encoder:
+#             x = block(x,x_mask)
+
+#         x = F.dropout(x,p=0.4,training=self.training)
+#         x_mask = x_mask.unsqueeze(-1)
+#         x_mask = 1-x_mask.float()
+#         x = (x*x_mask).sum(1)/x_mask.sum(1)
+#         logit = self.logit(x)
+
+#         return logit
