@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'modeling',
+        'experiment_name': 'pooling',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
