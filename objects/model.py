@@ -142,7 +142,8 @@ class BasedPartyNet(nn.Module):
                 embed_dim,
             ) for i in range(num_block)
         ])
-        self.logit = ArcMarginProduct_subcenter(self.embed_dim, num_class)
+        self.lstm = nn.LSTM(input_size=embed_dim, hidden_size=embed_dim, num_layers=1, bidirectional=True, dropout=0.4)
+        self.logit = ArcMarginProduct_subcenter(self.embed_dim * 3, num_class)
 
     def forward(self, inputs):
         x, x_mask = pack_seq(inputs, self.max_length)
@@ -160,11 +161,14 @@ class BasedPartyNet(nn.Module):
             torch.zeros(B,1).to(x_mask),
             x_mask
         ],1)
-
+        
+        lstm_out, _ = self.lstm(x)
         for block in self.encoder:
             x = block(x,x_mask)
 
         cls = x[:,0]
+        lstm_out = lstm_out[:, 0]
+        cls = torch.cat([lstm_out, cls], dim=1)
         cls = F.dropout(cls,p=0.4,training=self.training)
         logit = self.logit(cls)
 

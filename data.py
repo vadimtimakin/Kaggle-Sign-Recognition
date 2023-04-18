@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset
 from sklearn.model_selection import StratifiedGroupKFold
+from scipy import interpolate
 
 
 class ISLDataset(Dataset):
@@ -130,10 +131,6 @@ class ISLDataset(Dataset):
                 spose = self.do_hflip_spose(spose)
                 leye, reye = self.do_hflip_eye(leye, reye)
                 slip = self.do_hflip_slip(slip)
-        
-        pod = spose.reshape(-1, 8, 1, 2) - spose.reshape(-1, 1, 8, 2)
-        pod = np.sqrt((pod ** 2).sum(-1))
-        pod = pod.reshape(L, -1)
 
         lhand2 = lhand[:, :21, :2]
         ld = lhand2.reshape(-1, 21, 1, 2) - lhand2.reshape(-1, 1, 21, 2)
