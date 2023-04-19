@@ -163,10 +163,8 @@ class BasedPartyNet(nn.Module):
         for block in self.encoder:
             x = block(x,x_mask)
 
-        x = F.dropout(x,p=0.4,training=self.training)
-        x_mask = x_mask.unsqueeze(-1)
-        x_mask = 1-x_mask.float()
-        x = (x*x_mask).sum(1)/x_mask.sum(1)
-        logit = self.logit(x)
+        cls = x[:,0]
+        cls = F.dropout(cls,p=0.4,training=self.training)
+        logit = self.logit(cls)
 
         return logit

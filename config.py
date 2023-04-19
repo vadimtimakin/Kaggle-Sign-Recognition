@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'superlen',
+        'experiment_name': 'superlenplus',
         'seed': 0xFACED,
         'num_classes': 250, 
     },

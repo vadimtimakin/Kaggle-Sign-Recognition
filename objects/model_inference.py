@@ -181,7 +181,7 @@ class MultiHeadAttention(nn.Module):
         out  = out.permute(1, 0, 2).reshape(-1, self.embed_dim)
         out  = F.linear(out, self.mha.out_proj.weight, self.mha.out_proj.bias)  
         return out
-
+    
 
 class TransformerBlock(nn.Module):
     def __init__(self,
