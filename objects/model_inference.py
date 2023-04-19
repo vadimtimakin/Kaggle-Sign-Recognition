@@ -48,7 +48,7 @@ class InputNet(tf.keras.layers.Layer):
 		])
         self.lhand = (468, 489)
         self.rhand = (522, 543)
-        self.max_length = 100
+        self.max_length = 256
 
     def call(self, xyz):
         xyz = xyz[:, :, :2]

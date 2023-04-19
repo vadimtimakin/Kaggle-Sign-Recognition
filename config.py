@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'lowerlr',
+        'experiment_name': 'superlen',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -18,7 +18,7 @@ config = {
     'training': {
         'num_epochs': 100,
         'early_stopping_epochs': 100,
-        'lr': 1e-5 / 100,
+        'lr': 1e-4 / 100,
 
         'mixed_precision': True,
         'gradient_accumulation': False,
@@ -58,10 +58,10 @@ config = {
     },
     'model': {           
         'freeze_batchnorms': False,
-        'converter_sample_input_shape': [100, 543, 3],
-        'model_sample_input_shape': [100, 828],
+        'converter_sample_input_shape': [256, 543, 3],
+        'model_sample_input_shape': [256, 828],
         'params': {
-            "max_length": 100,
+            "max_length": 256,
             "embed_dim": 512, 
             "num_point": 828,
             "num_head": 16,
