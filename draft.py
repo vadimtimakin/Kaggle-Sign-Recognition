@@ -1,7 +1,13 @@
-import torch
-xyz = torch.zeros([64, 100, 512])
-xyz = torch.cat([
-    torch.zeros(64, 1, 512),
-    xyz
-],1)
-print(xyz.shape)
+import torch.nn as nn
+
+cls = nn.Sequential(
+    nn.Linear(512, 512 * 2),
+    nn.LayerNorm(512 * 2),
+    nn.Hardswish(),
+    nn.Dropout(0.4),
+    nn.Linear(512 * 2, 512),
+    nn.LayerNorm(512),
+    nn.Hardswish(),
+)
+
+print(cls[3].p)

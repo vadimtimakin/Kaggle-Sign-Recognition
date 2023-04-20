@@ -141,6 +141,8 @@ class BasedPartyNet(nn.Module):
                 embed_dim,
             ) for i in range(num_block)
         ])
+
+        self.dropout = nn.Dropout(p=0.4)
         self.logit = ArcMarginProduct_subcenter(self.embed_dim, num_class)
 
     def forward(self, inputs):
@@ -164,7 +166,7 @@ class BasedPartyNet(nn.Module):
             x = block(x,x_mask)
 
         cls = x[:,0]
-        cls = F.dropout(cls,p=0.4,training=self.training)
+        cls = self.dropout(cls)
         logit = self.logit(cls)
 
         return logit

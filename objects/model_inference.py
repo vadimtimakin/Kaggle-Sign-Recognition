@@ -234,6 +234,7 @@ class SingleNet(nn.Module):
                 batch_first=False
             ) for _ in range(self.num_block)
         ])
+        
         self.logit = ArcMarginProduct_subcenter(self.embed_dim, num_class)
         self.softmax = nn.Softmax(dim=1)
 

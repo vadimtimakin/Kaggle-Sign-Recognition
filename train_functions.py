@@ -205,6 +205,16 @@ def run(config, fold):
 
         start_time = time.time()
 
+        if epoch < 20:
+            model.x_embed[3].p = 0.0
+            model.dropout.p = 0.0
+        elif 20 <= epoch <= 80:
+            model.x_embed[3].p = 0.4
+            model.dropout.p = 0.4
+        else:
+            model.x_embed[3].p = 0.2
+            model.dropout.p = 0.2
+
         # Train and validation steps
         train_loss = train(config, model, train_loader, optimizer, scheduler, loss_function, epoch, scaler)
         if config.split.all_data_train:

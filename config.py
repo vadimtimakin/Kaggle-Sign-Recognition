@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'superlenplus',
+        'experiment_name': 'latedropout',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -58,10 +58,10 @@ config = {
     },
     'model': {           
         'freeze_batchnorms': False,
-        'converter_sample_input_shape': [256, 543, 3],
-        'model_sample_input_shape': [256, 828],
+        'converter_sample_input_shape': [384, 543, 3],
+        'model_sample_input_shape': [384, 828],
         'params': {
-            "max_length": 256,
+            "max_length": 384,
             "embed_dim": 512, 
             "num_point": 828,
             "num_head": 16,
