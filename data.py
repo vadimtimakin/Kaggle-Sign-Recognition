@@ -7,8 +7,7 @@ import pickle
 import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset
-from sklearn.model_selection import StratifiedGroupKFold
-from scipy import interpolate
+from sklearn.model_selection import StratifiedKFold
 
 
 class ISLDataset(Dataset):
@@ -265,9 +264,9 @@ def get_fold_samples(config, current_fold):
     # The dataframe isn't split in advantage
     else:
         groups = df["path"].map(lambda x: x.split("/")[1])
-        kfold = StratifiedGroupKFold(n_splits=config.split.n_splits, shuffle=True, random_state=config.general.seed)
+        kfold = StratifiedKFold(n_splits=config.split.n_splits, shuffle=True, random_state=config.general.seed)
         
-        for fold, (train_index, val_index) in enumerate(kfold.split(data, labels, groups)):
+        for fold, (train_index, val_index) in enumerate(kfold.split(data, labels)):
             if fold == current_fold:
                 if type(data) is np.ndarray:
                     train_data = data[train_index]

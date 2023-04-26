@@ -51,25 +51,31 @@ class InputNet(tf.keras.layers.Layer):
         self.max_length = 384
 
     def do_hflip_hand(self, lhand, rhand):
-        rhand[...,0] *= -1
-        lhand[...,0] *= -1
+        rhand = tf.reverse(rhand, axis=[0])
+        lhand = tf.reverse(lhand, axis=[0])
+        rhand *= tf.constant([-1, 1], dtype=rhand.dtype)
+        lhand *= tf.constant([-1, 1], dtype=lhand.dtype)
         rhand, lhand = lhand, rhand
         return lhand, rhand
 
     def do_hflip_eye(self, leye, reye):
-        reye[...,0] *= -1
-        leye[...,0] *= -1
+        reye = tf.reverse(reye, axis=[0])
+        leye = tf.reverse(leye, axis=[0])
+        reye *= tf.constant([-1, 1], dtype=reye.dtype)
+        leye *= tf.constant([-1, 1], dtype=leye.dtype)
         reye, leye = leye, reye
         return leye, reye
 
     def do_hflip_spose(self, spose):
-        spose[...,0] *= -1
-        spose = spose[:,[3,4,5,0,1,2,7,6]]
+        spose = tf.reverse(spose, axis=[0])
+        spose *= tf.constant([-1, 1], dtype=spose.dtype)
+        spose = tf.gather(spose, [3, 4, 5, 0, 1, 2, 7, 6], axis=1)
         return spose
 
     def do_hflip_slip(self, slip):
-        slip[...,0] *= -1
-        slip = slip[:,[10,9,8,7,6,5,4,3,2,1,0]+[19,18,17,16,15,14,13,12,11]]
+        slip = tf.reverse(slip, axis=[0])
+        slip *= tf.constant([-1, 1], dtype=slip.dtype)
+        slip = tf.gather(slip, [10,9,8,7,6,5,4,3,2,1,0]+[19,18,17,16,15,14,13,12,11], axis=1)
         return slip
 
     def call(self, xyz):
@@ -97,18 +103,25 @@ class InputNet(tf.keras.layers.Layer):
         tta_leye, tta_reye = self.do_hflip_eye(leye, reye)
         tta_slip = self.do_hflip_slip(slip)
 
-        lhand2 = xyz[:, self.lhand[0]:self.lhand[1],:2]
-        rhand2 = xyz[:, self.rhand[0]:self.rhand[1],:2]
-
-        ld = tf.reshape(lhand2,(-1,21,1,2))-tf.reshape(lhand2,(-1,1,21,2))
+        ld = tf.reshape(lhand,(-1,21,1,2))-tf.reshape(lhand,(-1,1,21,2))
         ld = tf.math.sqrt(tf.reduce_sum((ld ** 2),-1))
         ld = tf.reshape(ld,(L, -1))
         ld = tf.gather(ld, self.TRIU, axis=1)
 
-        rd = tf.reshape(rhand2,(-1,21,1,2))-tf.reshape(rhand2,(-1,1,21,2))
+        rd = tf.reshape(rhand,(-1,21,1,2))-tf.reshape(rhand,(-1,1,21,2))
         rd = tf.math.sqrt(tf.reduce_sum((rd ** 2),-1))
         rd = tf.reshape(rd,(L, -1))
         rd = tf.gather(rd, self.TRIU, axis=1)
+
+        tta_ld = tf.reshape(tta_lhand,(-1,21,1,2))-tf.reshape(tta_lhand,(-1,1,21,2))
+        tta_ld = tf.math.sqrt(tf.reduce_sum((tta_ld ** 2),-1))
+        tta_ld = tf.reshape(tta_ld,(L, -1))
+        tta_ld = tf.gather(tta_ld, self.TRIU, axis=1)
+
+        tta_rd = tf.reshape(tta_rhand,(-1,21,1,2))-tf.reshape(tta_rhand,(-1,1,21,2))
+        tta_rd = tf.math.sqrt(tf.reduce_sum((tta_rd ** 2),-1))
+        tta_rd = tf.reshape(tta_rd,(L, -1))
+        tta_rd = tf.gather(tta_rd, self.TRIU, axis=1)
 
         xyz = tf.concat([
             lhand, rhand, spose, leye, reye, slip,
@@ -131,13 +144,13 @@ class InputNet(tf.keras.layers.Layer):
         tta_xyz = tf.concat([
             tf.reshape(tta_xyz,(L,-1)),
             tf.reshape(tta_dxyz,(L,-1)),
-            tf.reshape(rd,(L,-1)),
-            tf.reshape(ld,(L,-1)),
+            tf.reshape(tta_rd,(L,-1)),
+            tf.reshape(tta_ld,(L,-1)),
         ], -1)
 
         xyz = tf.where(tf.math.is_nan(xyz), tf.zeros_like(xyz), xyz)
         tta_xyz = tf.where(tf.math.is_nan(tta_xyz), tf.zeros_like(tta_xyz), tta_xyz)
-        return xyz
+        return xyz, tta_xyz
     
 
 class ArcMarginProduct_subcenter(nn.Module):

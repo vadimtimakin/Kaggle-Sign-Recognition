@@ -65,3 +65,5 @@ numhead4 | 0.004 | 495 s
 distancenorm | 0.6836 | 38364 s
 
 supernorm | 0.6627 | 34476 s
+
+skf | 0.8188 | 46414 s

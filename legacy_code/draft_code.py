@@ -423,3 +423,82 @@
 #         logit = self.logit(x)
 
 #         return logit
+
+
+# class SpatialAttention(nn.Module):
+#     def __init__(self):
+#         super(SpatialAttention, self).__init__()
+
+#         self.conv1 = nn.Linear(2, 1)
+#         self.sigmoid = nn.Sigmoid()
+
+#     def forward(self, x):
+#         avg_out = torch.mean(x, dim=2, keepdim=True)
+#         max_out, _ = torch.max(x, dim=2, keepdim=True)
+#         x = torch.cat([avg_out, max_out], dim=2)
+#         x = self.conv1(x)
+#         return self.sigmoid(x)
+
+
+# class ChannelAttention(nn.Module):
+#     def __init__(self, in_planes):
+#         super(ChannelAttention, self).__init__()
+#         self.avg_pool = nn.AdaptiveAvgPool2d((1, in_planes))
+#         self.max_pool = nn.AdaptiveMaxPool2d((1, in_planes))
+           
+#         self.fc = nn.Sequential(nn.Linear(in_planes, in_planes // 16, 1),
+#                                nn.Hardswish(),
+#                                nn.Linear(in_planes // 16, in_planes))
+#         self.sigmoid = nn.Sigmoid()
+
+#     def forward(self, x):
+#         avg_out = self.fc(self.avg_pool(x))
+#         max_out = self.fc(self.max_pool(x))
+#         out = avg_out + max_out
+#         return self.sigmoid(out)
+
+
+# class TCM(nn.Module):
+#     def __init__(self, n_segment, fold_dim):
+#         super().__init__()
+#         self.n_segment = n_segment
+#         self.fold_div = fold_dim
+
+#     def forward(self, x):
+#         nt, c, l = x.size()
+#         n_batch = nt // self.n_segment
+#         x = x.view(n_batch, self.n_segment, c, l)
+        
+#         fold = c // self.fold_div
+
+#         out = torch.zeros_like(x)
+#         out[:, :-1, :fold] = x[:, 1:, :fold]
+#         out[:, 1:, fold: 2 * fold] = x[:, :-1, fold: 2 * fold]
+#         out[:, :, 2 * fold:] = x[:, :, 2 * fold:]
+        
+#         out = out.view(nt, c, l)
+#         return out
+
+
+#     def normalize_hand(self, keypoints):
+#         x_max, _ = torch.max(keypoints[:, :, 0], dim=1)
+#         x_min, _ = torch.min(keypoints[:, :, 0], dim=1)
+#         y_max, _ = torch.max(keypoints[:, :, 1], dim=1)
+#         y_min, _ = torch.min(keypoints[:, :, 1], dim=1)
+        
+#         width = x_max - x_min
+#         height = y_max - y_min
+#         center_x = (x_max + x_min) / 2
+#         center_y = (y_max + y_min) / 2
+        
+#         box_width = torch.max(0.1 * width, 0.1 * height)
+#         box_height = torch.max(0.1 * width, 0.1 * height)
+        
+#         bbox_left = center_x - box_width / 2
+#         bbox_top = center_y - box_height / 2
+        
+#         normalized_keypoints = (keypoints - torch.stack([bbox_left, bbox_top], dim=1).unsqueeze(1)) / torch.stack([box_width, box_height], dim=1).unsqueeze(1)
+        
+#         normalized_keypoints -= 0.5
+
+#         return normalized_keypoints

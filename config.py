@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'spatial',
+        'experiment_name': 'skf',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -52,8 +52,7 @@ config = {
         'all_data_train': False,
         'n_splits': 5,
         'folds_to_train': [2, 3, 4, 0, 1],
-        'folds_to_submit': [2, 3, 4, 0, 1],
-        'weights': [1/5] * 5,
+        'folds_to_submit': [2, 3, 4],
         'already_split': False,
     },
     'model': {           
