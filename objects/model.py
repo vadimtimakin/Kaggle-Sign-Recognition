@@ -68,7 +68,7 @@ class TransformerBlock(nn.Module):
     ):
         super().__init__()
         self.attn  = MultiHeadAttention(embed_dim, num_head,batch_first)
-        self.ffn   = FeedForward(embed_dim, out_dim)
+        self.ffn   = FeedForward(embed_dim, embed_dim)
         self.norm1 = nn.LayerNorm(embed_dim)
         self.norm2 = nn.LayerNorm(out_dim)
 

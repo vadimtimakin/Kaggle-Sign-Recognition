@@ -1,12 +1,8 @@
 import os
 import time
 import torch
-import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
-
-import nobuco
-from nobuco import ChannelOrder, ChannelOrderingStrategy
 
 import onnx
 import onnxsim
@@ -36,46 +32,57 @@ submission_path = "submission.zip"
 
 feature_converter = InputNet()
 
-
-@nobuco.converter(F.normalize, channel_ordering_strategy=ChannelOrderingStrategy.MINIMUM_TRANSPOSITIONS)
-def normalize(input):
-    return lambda x: tf.linalg.l2_normalize(x, axis=-1)
-
-
-@nobuco.converter(torch.nn.modules.Linear, channel_ordering_strategy=ChannelOrderingStrategy.MINIMUM_TRANSPOSITIONS)
-def linear(a, b):
-    return lambda x: x @ a.weight.detach().numpy().T + a.bias.detach().numpy()
-
 # Initialize models
 
-keras_models = []
 for fold in config.split.folds_to_submit:
     model_infe = BasedPartyNet(fold, **config.model.params)
     model_infe.load_state_dict(
-        torch.load(f"{config.paths.path_to_checkpoints}/fold_{fold}/best.pt", map_location='cpu')["model"],
+        torch.load(f"{config.paths.path_to_checkpoints}/fold_{fold}/best.pt")["model"],
     )
+    model_infe = model_infe.to(config.training.device)
 
-    sample_input = torch.rand(list(config.model.model_sample_input_shape))
+    sample_input = torch.rand(list(config.model.model_sample_input_shape)).to(config.training.device)
 
     model_infe.eval()
+    model_infe = torch.jit.script(model_infe)
 
-    keras_model = nobuco.pytorch_to_keras(
-        model_infe,
-        args=[sample_input],
-        inputs_channel_order=ChannelOrder.TENSORFLOW,
-        outputs_channel_order=ChannelOrder.TENSORFLOW,
+    with torch.no_grad():
+        for _ in tqdm(range(100)):
+            _ = model_infe(sample_input)
+
+    torch.onnx.export(
+        model_infe,  # PyTorch Model
+        sample_input,  # Input tensor
+        onnx_model_path.replace('N', str(fold)),  # Output file (eg. 'output_model.onnx')
+        export_params = True,         
+        opset_version = 12, 
+        do_constant_folding=True,      
+        input_names =  ['inputs'],     
+        output_names = ['outputs'],  
+        dynamic_axes={
+            'inputs': {0: 'length'},
+        },
     )
-    keras_model.append(keras_model)
+
+    print("Model's Size (MB):", os.path.getsize(onnx_model_path.replace('N', str(fold)))/1e6)
+    model = onnx.load(onnx_model_path.replace('N', str(fold)))
+    onnx.checker.check_model(model)
+    model_simple, check = onnxsim.simplify(model)
+    onnx.save(model_simple, onnx_model_path.replace('N', str(fold)))
+    print("Model's Size (MB):", os.path.getsize(onnx_model_path.replace('N', str(fold)))/1e6)
+
+    onnx_model = onnx.load(onnx_model_path.replace('N', str(fold)))
+    tf_rep = prepare(onnx_model)
+    tf_rep.export_graph(tf_model_path.replace('N', str(fold)))
 
 
 class ASLInferModel(tf.Module):
     """The inference model."""
 
-    def __init__(self, models):
+    def __init__(self):
         super(ASLInferModel, self).__init__()
-        self.weights = config.split.weights
         self.feature_gen = feature_converter
-        self.models = models
+        self.models = [tf.saved_model.load(tf_model_path.replace('N', str(f))) for f in config.split.folds_to_submit]
         self.feature_gen.trainable = False
         for model in self.models: model.trainable = False
 
@@ -87,13 +94,14 @@ class ASLInferModel(tf.Module):
     def call(self, inputs):
         output_tensors = {}
         features = self.feature_gen(tf.cast(inputs, dtype=tf.float32))
-        output_tensors["outputs"] = tf.reduce_sum([self.models[f](features
-        )[0, :] for f in range(len(config.split.folds_to_submit))], axis=0)
+        output_tensors["outputs"] = tf.reduce_sum([self.models[f](
+            **{"inputs": features}
+        )["outputs"][0, :] for f in range(len(config.split.folds_to_submit))], axis=0)
         return output_tensors
         
 # Convert the model
 
-mytfmodel = ASLInferModel(keras_models)
+mytfmodel = ASLInferModel()
 tf.saved_model.save(
     mytfmodel,
     tf_infer_model_path,

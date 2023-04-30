@@ -502,3 +502,37 @@
 #         normalized_keypoints -= 0.5
 
 #         return normalized_keypoints
+
+# rre = rhand2.reshape(-1, 21, 1, 2) - reye[:, :3, :2].reshape(-1, 1, 3, 2)
+# rre = np.sqrt((rre ** 2).sum(-1))
+# rre = rre.reshape(L, -1)
+
+# lre = lhand2.reshape(-1, 21, 1, 2) - reye[:, :3, :2].reshape(-1, 1, 3, 2)
+# lre = np.sqrt((lre ** 2).sum(-1))
+# lre = lre.reshape(L, -1)
+
+# rle = rhand2.reshape(-1, 21, 1, 2) - leye[:, :3, :2].reshape(-1, 1, 3, 2)
+# rle = np.sqrt((rle ** 2).sum(-1))
+# rle = rle.reshape(L, -1)
+
+# lle = lhand2.reshape(-1, 21, 1, 2) - leye[:, :3, :2].reshape(-1, 1, 3, 2)
+# lle = np.sqrt((lle ** 2).sum(-1))
+# lle = lle.reshape(L, -1)
+
+# lse = lhand2.reshape(-1, 21, 1, 2) - slip[:, :3, :2].reshape(-1, 1, 3, 2)
+# lse = np.sqrt((lse ** 2).sum(-1))
+# lse = lse.reshape(L, -1)
+
+# rse = rhand2.reshape(-1, 21, 1, 2) - slip[:, :3, :2].reshape(-1, 1, 3, 2)
+# rse = np.sqrt((rse ** 2).sum(-1))
+# rse = rse.reshape(L, -1)
+
+# vectors = rhand2[:, 1:, :] - rhand2[:, :-1, :]
+# angles = torch.atan2(vectors[:, :, 1], vectors[:, :, 0])
+# angles_degrees = torch.rad2deg(angles)
+# rx = angles_degrees - 90.0
+
+# vectors = lhand2[:, 1:, :] - rhand2[:, :-1, :]
+# angles = torch.atan2(vectors[:, :, 1], vectors[:, :, 0])
+# angles_degrees = torch.rad2deg(angles)
+# lx = angles_degrees - 90.0

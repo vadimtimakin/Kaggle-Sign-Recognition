@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 
 config = {
     'general': {
-        'experiment_name': 'skf',
+        'experiment_name': '200e',
         'seed': 0xFACED,
         'num_classes': 250, 
     },
@@ -16,7 +16,7 @@ config = {
         'path_to_checkpoints': './checkpoints/${general.experiment_name}', 
     },
     'training': {
-        'num_epochs': 100,
+        'num_epochs': 200,
         'early_stopping_epochs': 100,
         'lr': 1e-4 / 100,
 
@@ -52,7 +52,7 @@ config = {
         'all_data_train': False,
         'n_splits': 5,
         'folds_to_train': [2, 3, 4, 0, 1],
-        'folds_to_submit': [2, 3, 4],
+        'folds_to_submit': [2, 3, 4, 0, 1],
         'already_split': False,
     },
     'model': {           
@@ -84,8 +84,8 @@ config = {
         'name': 'CosineAnnealingLR', 
         'interval': 'epoch',
         'params': {
-            'T_max': 95,
-            'eta_min': 1e-7,
+            'T_max': 195,
+            'eta_min': 1e-8,
         },
     },
     'loss': {
