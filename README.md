@@ -4,6 +4,7 @@ In this repository you can find the solution and code for [Google - Isolated Sig
 ## General pipeline
 
 ## Validation
+Using StratifiedGroupKFold (group by participant_id) was crucial in the beginning of competition in order to prevent overfitting, however later, after adding some regularization to the training process, simple StratifiedKFold or Random Seed Ensemble trained on the full data gave the same results. Final solution uses 5 of 5 folds of `StratifiedGroupKFold` split, has approximate size of `35 MB` and runs in around `50 minutes`.
 
 ## Metric learning
 The main advantage I got was from treating this problem as a metric learning problem (since there are 250 classes). I changed CrossEntropyLoss to `ArcFaceLoss` (later improved with `label smoothing = 0.2`) and added `ArcMarginProduct` after the encoder block resulting to a significantly higher model perfomance. Since the classification was based on several body parts I decided to use `Sub Center ArcMarginProduct block`, which also led to a better score.
