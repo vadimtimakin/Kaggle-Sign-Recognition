@@ -2,6 +2,7 @@
 In this repository you can find the solution and code for [Google - Isolated Sign Language Recognition](https://www.kaggle.com/competitions/asl-signs/discussion) competition (top-50).
 
 ## General pipeline
+<a href="https://github.com/t0efL/Kaggle-Sign-Recognition/blob/main/Pipeline.png"><img alt="Pipeline" src="https://github.com/t0efL/Kaggle-Sign-Recognition/blob/main/Pipeline.png"></a>
 
 ## Validation
 Using StratifiedGroupKFold (group by participant_id) was crucial in the beginning of competition in order to prevent overfitting, however later, after adding some regularization to the training process, simple StratifiedKFold or Random Seed Ensemble trained on the full data gave the same results. Final solution uses 5 of 5 folds of `StratifiedGroupKFold` split, has approximate size of `35 MB` and runs in around `50 minutes`.
