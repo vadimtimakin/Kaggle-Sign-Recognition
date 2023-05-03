@@ -22,3 +22,4 @@ In this repository you can find the solution and code for [Google - Isolated Sig
 ## Didn't have time to try
 
 ## Bonus
+I also shared some thoughts on model generalization and possible score plateau [here](https://www.kaggle.com/competitions/asl-signs/discussion/406457).
