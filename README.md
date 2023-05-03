@@ -12,6 +12,7 @@ In this repository you can find the solution and code for [Google - Isolated Sig
 ## Preprocessing
 
 ## Augmentations
+My solution uses `Shift, Scale, Rotate and Hflips` augmentations. Besides them, I checked another augmentations like Random Frame Drops, Interpolation, Noise, Mix Up and Local Affines, but they didn't improved the score. 
 
 ## Training setup
 The model was trained for `100 epochs` with `Mixed Precision`, `batchsize = 64` (other values showed worse perfomance) and `Ranger` optimizer (learning rate schedule: 1e-6 → 1e-4 → 1e-7).
