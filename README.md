@@ -16,6 +16,7 @@ In this repository you can find the solution and code for [Google - Isolated Sig
 ## Training setup
 
 ## Model optimization
+My model was initially written on PyTorch and converted to TFLite using `PyTorch → torch.jit.script() → ONNX → TFLite` pipeline before submission. Preprocessing part for the inference model  was rewritten on TensorFlow due to the RAM leakage in PyTorch version. I also used `fp16` inference for a submission. In some of my submission I replaced `Swish` activation functions to `ReLU`, it slightly decreased a score, but gave a noticable advantage in model's speed.
 
 ## Some other things that didn't work
 - Dropping messy participant
