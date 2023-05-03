@@ -10,6 +10,17 @@ In this repository you can find the solution and code for [Google - Isolated Sig
 ## Modeling
 
 ## Preprocessing
+My preprocessing pipeline can be described as follows:
+1. Drop Z-coordinates.
+2. Sequences with length higher than 384 are center cropped to 384, sequences with lower length aren't changed.
+3. Apply mean-std normalization.
+4. Take only crucial keypoints.
+5. Hand distances are generated.
+6. Motion features are generated.
+
+Advanced normalization (moving coordinate system to the center and rotating, and scaling it), joint angles, OX-angles, External distances and using constant number of frames didn't improve the score.
+
+Leaving only one hand leads to a higher score, but the same perfomance could be achieved with the hflip augmentation, so I decided to choose the second option in order to make room for TTA (which wasn't used in the final submission due to the time limit).
 
 ## Augmentations
 My solution uses `Shift, Scale, Rotate and Hflips` augmentations. Besides them, I checked another augmentations like Random Frame Drops, Interpolation, Noise, Mix Up and Local Affines, but they didn't improved the score. 
