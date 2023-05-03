@@ -8,6 +8,11 @@ In this repository you can find the solution and code for [Google - Isolated Sig
 ## Metric learning
 
 ## Modeling
+I used `Transformer` as the main model in this competition. I was able to achieve the best perfomance using `small number of encoder blocks (1)` and `big number of heads (16)`. I also added `MLP embedding` before encoder block and `Sub Center ArcMarginProduct layer` after it. As an activation function I used `Swish`. The perfomanced was achieved with `dropout = 0.4`.
+
+I did some experiments with LSTM and attention modifications but those didn't succeed.
+
+Besided that, I observed better results with higher number of MLP layers, but didn't use it since it led to more memory consumption and slower speed.
 
 ## Preprocessing
 My preprocessing pipeline can be described as follows:
