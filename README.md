@@ -6,6 +6,11 @@ In this repository you can find the solution and code for [Google - Isolated Sig
 ## Validation
 
 ## Metric learning
+The main advantage I got was from treating this problem as a metric learning problem (since there are 250 classes). I changed CrossEntropyLoss to `ArcFaceLoss` (later improved with `label smoothing = 0.2`) and added `ArcMarginProduct` after the encoder block resulting to a significantly higher model perfomance. Since the classification was based on several body parts I decided to use `Sub Center ArcMarginProduct block`, which also led to a better score.
+
+Inspired by this, I spent more time on this idea and tested ArcFaceLoss based on FocalLoss and combination of ArcFaceLoss and CrossEntropy but it didn't bring better results.
+
+I also tried using modern approaches like AdaCos, FaceCos, MagFace, Multi-Similarity loss functions and others. However, they didn't improve model's perfomance. I think the reason of this lies in fact that the main advantage of those loss functions comes from dealing with few number of samples or class imbalance using adaptive margin algorithms which wasn't relevant in this competition since all classes were balanced and presented with enough samples.
 
 ## Modeling
 I used `Transformer` as the main model in this competition. I was able to achieve the best perfomance using `small number of encoder blocks (1)` and `big number of heads (16)`. I also added `MLP embedding` before encoder block and `Sub Center ArcMarginProduct layer` after it. As an activation function I used `Swish`. The perfomanced was achieved with `dropout = 0.4`.
